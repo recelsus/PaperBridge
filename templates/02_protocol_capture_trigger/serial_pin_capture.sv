@@ -30,14 +30,14 @@ module serial_pin_capture #(
     wire level_match = ((pins_q & level_mask_i) == (level_value_i & level_mask_i))
                     && (level_mask_i != '0);
 
-    always_comb begin
+    always @* begin
         pins_event = '0;
         for (int i = 0; i < PIN_COUNT && i < 8; i++) begin
             pins_event[i] = pins_q[i];
         end
     end
 
-    always_comb begin
+    always @* begin
         pending_d = pending_q;
         event_d = event_q;
 

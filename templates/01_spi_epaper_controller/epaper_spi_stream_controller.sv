@@ -49,7 +49,7 @@ module epaper_spi_stream_controller #(
 
     wire spi_tick = (spi_cnt_q == SPI_DIV - 1);
 
-    always_comb begin
+    always @* begin
         state_d     = state_q;
         reset_cnt_d = reset_cnt_q;
         spi_cnt_d   = spi_cnt_q;
