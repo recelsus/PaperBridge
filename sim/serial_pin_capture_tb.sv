@@ -46,6 +46,14 @@ module serial_pin_capture_tb;
         rst_n = 1'b1;
         repeat (3) @(posedge clk);
 
+        pins_i = 4'b0010;
+        repeat (5) @(posedge clk);
+        if (event_valid) begin
+            $fatal(1, "edge-disabled pin generated an event");
+        end
+        pins_i = 4'b0000;
+        repeat (5) @(posedge clk);
+
         pins_i = 4'b0001;
         wait (event_valid);
 
@@ -57,6 +65,21 @@ module serial_pin_capture_tb;
         @(posedge clk);
         event_ready = 1'b0;
         wait (!event_valid);
+
+        edge_enable_i = 4'b0000;
+        pins_i = 4'b0000;
+        repeat (5) @(posedge clk);
+        edge_enable_i = 4'b0011;
+        pins_i = 4'b0011;
+        wait (event_valid);
+        if (event_data[47:40] != 8'h01 || event_data[35:32] != 4'b0011) begin
+            $fatal(1, "unexpected multi-pin edge event: %08h", event_data);
+        end
+        event_ready = 1'b1;
+        @(posedge clk);
+        event_ready = 1'b0;
+        wait (!event_valid);
+        edge_enable_i = 4'b0001;
 
         level_mask_i = 4'b0010;
         level_value_i = 4'b0010;
@@ -91,6 +114,35 @@ module serial_pin_capture_tb;
         wait (!event_valid);
 
         level_mask_i = 4'b0000;
+        edge_enable_i = 4'b0000;
+        pins_i = 4'b0000;
+        repeat (4) @(posedge clk);
+
+        edge_enable_i = 4'b0001;
+        pins_i = 4'b0001;
+        wait (event_valid);
+        pins_i = 4'b0000;
+        repeat (4) @(posedge clk);
+
+        if (overflow) begin
+            $fatal(1, "overflow set while FIFO still had space");
+        end
+
+        if (event_data[47:40] != 8'h01 || event_data[35:32] != 4'b0001) begin
+            $fatal(1, "unexpected first FIFO event: %08h", event_data);
+        end
+        event_ready = 1'b1;
+        @(posedge clk);
+        event_ready = 1'b0;
+        @(negedge clk);
+        if (event_data[47:40] != 8'h01 || event_data[35:32] != 4'b0000) begin
+            $fatal(1, "unexpected second FIFO event: %08h", event_data);
+        end
+        event_ready = 1'b1;
+        @(posedge clk);
+        event_ready = 1'b0;
+        wait (!event_valid);
+
         pins_i = 4'b0000;
         repeat (4) @(posedge clk);
 

@@ -16,7 +16,10 @@ module epaper_spi_stream_controller_tb;
     logic epd_sclk_q;
 
     logic [7:0] sampled_byte;
+    logic [7:0] sampled_bytes [0:3];
+    logic sampled_dc [0:3];
     int sampled_count;
+    int sampled_byte_count;
 
     epaper_spi_stream_controller #(
         .CLK_HZ(1_000_000),
@@ -49,10 +52,31 @@ module epaper_spi_stream_controller_tb;
     always @(negedge clk) begin
         epd_sclk_q <= epd_sclk;
         if (!epd_cs_n && epd_sclk && !epd_sclk_q) begin
+            if ((sampled_count % 8) == 0) begin
+                sampled_dc[sampled_byte_count] = epd_dc;
+            end
             sampled_byte = {sampled_byte[6:0], epd_mosi};
+            if ((sampled_count % 8) == 7) begin
+                sampled_bytes[sampled_byte_count] = sampled_byte;
+                sampled_byte_count = sampled_byte_count + 1;
+            end
             sampled_count = sampled_count + 1;
         end
     end
+
+    task automatic send_word(input logic dc, input logic [7:0] byte_value, input logic last_value);
+        begin
+            wait (in_ready);
+            @(negedge clk);
+            in_data = {dc, byte_value};
+            in_last = last_value;
+            in_valid = 1'b1;
+            @(posedge clk);
+            @(negedge clk);
+            in_valid = 1'b0;
+            in_last = 1'b0;
+        end
+    endtask
 
     initial begin
         in_valid = 1'b0;
@@ -62,6 +86,11 @@ module epaper_spi_stream_controller_tb;
         epd_sclk_q = 1'b0;
         sampled_byte = '0;
         sampled_count = 0;
+        sampled_byte_count = 0;
+        for (int i = 0; i < 4; i++) begin
+            sampled_bytes[i] = '0;
+            sampled_dc[i] = 1'b0;
+        end
 
         repeat (4) @(posedge clk);
         rst_n = 1'b1;
@@ -73,26 +102,32 @@ module epaper_spi_stream_controller_tb;
         end
 
         epd_busy = 1'b0;
-        wait (in_ready);
-        @(negedge clk);
-        in_data = {1'b1, 8'ha5};
-        in_last = 1'b1;
-        in_valid = 1'b1;
-        @(posedge clk);
-        @(negedge clk);
-        in_valid = 1'b0;
-        in_last = 1'b0;
+        send_word(1'b0, 8'h12, 1'b0);
+        wait (sampled_byte_count == 1);
+        send_word(1'b1, 8'ha5, 1'b1);
 
         wait (frame_done);
-        @(posedge clk);
-
-        if (epd_dc != 1'b1) begin
-            $fatal(1, "dc pin was not driven as data");
+        if (!frame_done) begin
+            $fatal(1, "frame_done was not observable as a pulse");
+        end
+        repeat (2) @(posedge clk);
+        @(negedge clk);
+        if (frame_done) begin
+            $fatal(1, "frame_done stayed high for more than one cycle");
         end
 
-        if (sampled_count != 8 || sampled_byte != 8'ha5) begin
-            $fatal(1, "unexpected spi byte: count=%0d byte=%02h",
-                   sampled_count, sampled_byte);
+        if (sampled_byte_count != 2) begin
+            $fatal(1, "unexpected spi byte count: %0d", sampled_byte_count);
+        end
+
+        if (sampled_bytes[0] != 8'h12 || sampled_dc[0] != 1'b0) begin
+            $fatal(1, "unexpected command byte: dc=%0b byte=%02h",
+                   sampled_dc[0], sampled_bytes[0]);
+        end
+
+        if (sampled_bytes[1] != 8'ha5 || sampled_dc[1] != 1'b1) begin
+            $fatal(1, "unexpected data byte: dc=%0b byte=%02h",
+                   sampled_dc[1], sampled_bytes[1]);
         end
 
         $finish;
