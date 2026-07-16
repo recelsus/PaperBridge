@@ -26,7 +26,7 @@ module fb_1bpp_packer (
     assign byte_o = out_byte_q;
     assign byte_last = out_last_q;
 
-    always_comb begin
+    always @* begin
         shreg_d = shreg_q;
         count_d = count_q;
         out_valid_d = out_valid_q;
