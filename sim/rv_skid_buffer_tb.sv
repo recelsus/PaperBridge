@@ -27,6 +27,11 @@ module rv_skid_buffer_tb;
     always #5 clk = ~clk;
 
     initial begin
+        #100000;
+        $fatal(1, "test timeout");
+    end
+
+    initial begin
         in_valid = 1'b0;
         in_data = 8'h00;
         in_last = 1'b0;

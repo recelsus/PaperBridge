@@ -36,12 +36,26 @@ SystemVerilog should handle:
 
 ## Event Format
 
-The sample module outputs 32-bit event words:
+The sample module outputs event words whose timestamp field follows
+`TIMESTAMP_WIDTH`:
 
 ```text
-bits[31:24] event kind
-bits[23:16] sampled pin value
-bits[15:0]  timestamp low bits
+bits[TIMESTAMP_WIDTH+15:TIMESTAMP_WIDTH+8] event kind
+bits[TIMESTAMP_WIDTH+7 :TIMESTAMP_WIDTH]   sampled pin value
+bits[TIMESTAMP_WIDTH-1 :0]                 timestamp
 ```
 
 Transfer uses ready/valid.
+
+`PIN_COUNT` is limited to 1 through 8 because the event format reserves an
+8-bit sampled-pin field.
+
+## Trigger and Loss Behavior
+
+- Edge events are generated when any enabled pin changes.
+- Level events are generated only when the level condition changes from false
+  to true.
+- A level condition that remains true does not repeatedly emit events.
+- If a new event occurs while an older event is pending, the older event is
+  preserved and `overflow` is set.
+- `overflow` is sticky until reset.

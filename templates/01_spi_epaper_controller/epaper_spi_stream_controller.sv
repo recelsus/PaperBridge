@@ -23,8 +23,12 @@ module epaper_spi_stream_controller #(
 );
     localparam int SPI_DIV = (CLK_HZ + (2 * SPI_HZ) - 1) / (2 * SPI_HZ);
     localparam int SPI_DIV_W = (SPI_DIV <= 1) ? 1 : $clog2(SPI_DIV);
-    localparam int RESET_LOW_CYCLES = (CLK_HZ / 1_000_000) * RESET_LOW_US;
-    localparam int RESET_HIGH_CYCLES = (CLK_HZ / 1_000_000) * RESET_HIGH_US;
+    localparam longint RESET_LOW_CYCLES = (RESET_LOW_US == 0)
+                                        ? 0
+                                        : ((longint'(CLK_HZ) * longint'(RESET_LOW_US)) + 999_999) / 1_000_000;
+    localparam longint RESET_HIGH_CYCLES = (RESET_HIGH_US == 0)
+                                         ? 0
+                                         : ((longint'(CLK_HZ) * longint'(RESET_HIGH_US)) + 999_999) / 1_000_000;
     localparam int RESET_CNT_MAX = (RESET_LOW_CYCLES > RESET_HIGH_CYCLES)
                                  ? RESET_LOW_CYCLES
                                  : RESET_HIGH_CYCLES;
@@ -49,6 +53,26 @@ module epaper_spi_stream_controller #(
 
     wire spi_tick = (spi_cnt_q == SPI_DIV - 1);
 
+`ifndef SYNTHESIS
+    initial begin
+        if (CLK_HZ <= 0) begin
+            $fatal(1, "CLK_HZ must be greater than zero");
+        end
+        if (SPI_HZ <= 0) begin
+            $fatal(1, "SPI_HZ must be greater than zero");
+        end
+        if (SPI_HZ > (CLK_HZ / 2)) begin
+            $fatal(1, "SPI_HZ must be less than or equal to CLK_HZ / 2");
+        end
+        if (RESET_LOW_US < 0) begin
+            $fatal(1, "RESET_LOW_US must be non-negative");
+        end
+        if (RESET_HIGH_US < 0) begin
+            $fatal(1, "RESET_HIGH_US must be non-negative");
+        end
+    end
+`endif
+
     always @* begin
         state_d     = state_q;
         reset_cnt_d = reset_cnt_q;
@@ -69,7 +93,7 @@ module epaper_spi_stream_controller #(
         case (state_q)
             ST_RESET_LOW: begin
                 epd_rst_n = 1'b0;
-                if (reset_cnt_q >= RESET_LOW_CYCLES - 1) begin
+                if (RESET_LOW_CYCLES == 0 || reset_cnt_q >= RESET_LOW_CYCLES - 1) begin
                     reset_cnt_d = '0;
                     state_d = ST_RESET_HIGH;
                 end else begin
@@ -79,7 +103,7 @@ module epaper_spi_stream_controller #(
 
             ST_RESET_HIGH: begin
                 epd_rst_n = 1'b1;
-                if (reset_cnt_q >= RESET_HIGH_CYCLES - 1) begin
+                if (RESET_HIGH_CYCLES == 0 || reset_cnt_q >= RESET_HIGH_CYCLES - 1) begin
                     reset_cnt_d = '0;
                     state_d = ST_IDLE;
                 end else begin

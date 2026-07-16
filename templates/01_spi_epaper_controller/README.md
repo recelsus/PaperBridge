@@ -33,6 +33,15 @@ The host sends the complete panel initialization and frame update sequence as a
 stream of these words. This keeps panel-specific policy out of the RTL while the
 RTL still owns pin-level timing.
 
+## SPI Mode
+
+- Fixed SPI mode 0.
+- `sclk` idles low.
+- `mosi` is prepared while `sclk` is low.
+- Receivers sample on the rising edge.
+- Bytes are shifted MSB first.
+- `cs_n` is asserted while each byte is shifted and deasserted between bytes.
+
 ## Files
 
 - `epaper_spi_stream_controller.sv`: stream-to-SPI e-Paper pin controller.

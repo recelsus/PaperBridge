@@ -36,3 +36,14 @@ Output:
 ```
 
 This is the common packing style used by many monochrome display controllers.
+
+## Timing and Partial Byte Rules
+
+- The first pixel in a byte is placed at bit 7.
+- Pixels are packed MSB first.
+- If `pixel_last` arrives before eight pixels have been collected, unused lower
+  bits are filled with zero.
+- When `byte_valid=1` and `byte_ready=0`, `byte_o` and `byte_last` remain stable.
+- If the current output byte is accepted in a cycle, the next pixel may also be
+  accepted in that same cycle.
+- If the current output byte is not accepted, `pixel_ready=0` prevents new input.

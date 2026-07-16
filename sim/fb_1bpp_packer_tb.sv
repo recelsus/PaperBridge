@@ -26,6 +26,11 @@ module fb_1bpp_packer_tb;
 
     always #5 clk = ~clk;
 
+    initial begin
+        #100000;
+        $fatal(1, "test timeout");
+    end
+
     task automatic send_pixel(input logic bit_value, input logic last_value);
         begin
             pixel_valid = 1'b1;

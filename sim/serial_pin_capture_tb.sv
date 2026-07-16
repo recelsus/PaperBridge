@@ -8,7 +8,8 @@ module serial_pin_capture_tb;
     logic [3:0] level_value_i;
     logic event_valid;
     logic event_ready;
-    logic [31:0] event_data;
+    logic [47:0] event_data;
+    logic overflow;
 
     serial_pin_capture #(
         .PIN_COUNT(4),
@@ -22,10 +23,16 @@ module serial_pin_capture_tb;
         .level_value_i(level_value_i),
         .event_valid(event_valid),
         .event_ready(event_ready),
-        .event_data(event_data)
+        .event_data(event_data),
+        .overflow(overflow)
     );
 
     always #5 clk = ~clk;
+
+    initial begin
+        #100000;
+        $fatal(1, "test timeout");
+    end
 
     initial begin
         pins_i = 4'b0000;
@@ -41,7 +48,7 @@ module serial_pin_capture_tb;
         pins_i = 4'b0001;
         wait (event_valid);
 
-        if (event_data[31:24] != 8'h01 || event_data[19:16] != 4'b0001) begin
+        if (event_data[47:40] != 8'h01 || event_data[35:32] != 4'b0001) begin
             $fatal(1, "unexpected edge event: %08h", event_data);
         end
 
@@ -55,8 +62,46 @@ module serial_pin_capture_tb;
         pins_i = 4'b0011;
         wait (event_valid);
 
-        if (event_data[31:24] != 8'h02 || event_data[19:16] != 4'b0011) begin
+        if (event_data[47:40] != 8'h02 || event_data[35:32] != 4'b0011) begin
             $fatal(1, "unexpected level event: %08h", event_data);
+        end
+
+        event_ready = 1'b1;
+        @(posedge clk);
+        event_ready = 1'b0;
+        wait (!event_valid);
+
+        repeat (5) @(posedge clk);
+        if (event_valid) begin
+            $fatal(1, "level trigger repeated while level stayed true");
+        end
+
+        pins_i = 4'b0001;
+        repeat (4) @(posedge clk);
+        pins_i = 4'b0011;
+        wait (event_valid);
+        if (event_data[47:40] != 8'h02) begin
+            $fatal(1, "level trigger did not fire on re-entry");
+        end
+
+        event_ready = 1'b1;
+        @(posedge clk);
+        event_ready = 1'b0;
+        wait (!event_valid);
+
+        level_mask_i = 4'b0000;
+        pins_i = 4'b0000;
+        repeat (4) @(posedge clk);
+
+        pins_i = 4'b0001;
+        wait (event_valid);
+        pins_i = 4'b0000;
+        repeat (4) @(posedge clk);
+        pins_i = 4'b0001;
+        repeat (4) @(posedge clk);
+
+        if (!overflow) begin
+            $fatal(1, "overflow was not set for event while pending");
         end
 
         event_ready = 1'b1;

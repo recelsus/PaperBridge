@@ -32,6 +32,11 @@ module epaper_window_sequence_tb;
     always #5 clk = ~clk;
 
     initial begin
+        #100000;
+        $fatal(1, "test timeout");
+    end
+
+    initial begin
         expected[0]  = {1'b0, 8'h44};
         expected[1]  = {1'b1, 8'h01};
         expected[2]  = {1'b1, 8'h02};

@@ -30,6 +30,11 @@ module epaper_frame_fill_tb;
     always #5 clk = ~clk;
 
     initial begin
+        #100000;
+        $fatal(1, "test timeout");
+    end
+
+    initial begin
         start = 1'b0;
         out_ready = 1'b1;
         idx = 0;

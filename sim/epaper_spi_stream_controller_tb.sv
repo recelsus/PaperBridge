@@ -41,6 +41,11 @@ module epaper_spi_stream_controller_tb;
 
     always #5 clk = ~clk;
 
+    initial begin
+        #100000;
+        $fatal(1, "test timeout");
+    end
+
     always @(negedge clk) begin
         epd_sclk_q <= epd_sclk;
         if (!epd_cs_n && epd_sclk && !epd_sclk_q) begin
