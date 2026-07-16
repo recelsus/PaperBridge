@@ -66,6 +66,13 @@ module epaper_spi_stream_controller_tb;
         repeat (4) @(posedge clk);
         rst_n = 1'b1;
 
+        epd_busy = 1'b1;
+        repeat (4) @(posedge clk);
+        if (in_ready) begin
+            $fatal(1, "in_ready asserted while synchronized busy was active");
+        end
+
+        epd_busy = 1'b0;
         wait (in_ready);
         @(negedge clk);
         in_data = {1'b1, 8'ha5};

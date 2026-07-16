@@ -54,8 +54,9 @@ Details:
 - Converts pin changes into edge events
 - Detects false-to-true level condition transitions
 - Emits timestamped events
+- Holds multiple pending events in a small FIFO
 - Sets sticky `overflow` when an additional event occurs while another event is
-  pending
+  received while the FIFO is full
 
 This is not intended for directly observing high-speed differential links such
 as PCIe, USB high-speed, or MIPI DSI.
@@ -135,6 +136,18 @@ Use cases:
 - Separating ready paths
 - Small timing improvements
 
+### sync_2ff
+
+Path: `rtl/common/sync_2ff.sv`
+
+Two-flop synchronizer for single-bit asynchronous inputs.
+
+Use cases:
+
+- e-Paper `BUSY`
+- External trigger pins
+- Slow status inputs crossing into the local clock domain
+
 ## Test
 
 Icarus Verilog is used for the current tests.
@@ -159,16 +172,18 @@ make test-epaper
 make test-window
 make test-fill
 make test-skid
+make test-sync
 ```
 
 Test coverage:
 
 - `fb_1bpp_packer`: byte packing for 1bpp pixels
-- `serial_pin_capture`: edge events, level events, and overflow
+- `serial_pin_capture`: edge events, level events, FIFO holding, and overflow
 - `epaper_spi_stream_controller`: SPI output for `{dc, byte}` streams
 - `epaper_window_sequence`: window/cursor command streams
 - `epaper_frame_fill`: `0x24` and fill data generation
 - `rv_skid_buffer`: one-word holding under backpressure
+- `sync_2ff`: two-stage synchronization behavior
 
 ## Caution
 

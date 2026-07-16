@@ -1,8 +1,8 @@
 IVERILOG ?= iverilog
 VVP ?= vvp
 
-.PHONY: test test-packer test-capture test-epaper test-window test-fill test-skid clean
-test: test-packer test-capture test-epaper test-window test-fill test-skid
+.PHONY: test test-packer test-capture test-epaper test-window test-fill test-skid test-sync clean
+test: test-packer test-capture test-epaper test-window test-fill test-skid test-sync
 
 test-packer:
 	$(IVERILOG) -g2012 -o /tmp/fb_1bpp_packer_tb.vvp \
@@ -18,6 +18,7 @@ test-capture:
 
 test-epaper:
 	$(IVERILOG) -g2012 -o /tmp/epaper_spi_stream_controller_tb.vvp \
+		rtl/common/sync_2ff.sv \
 		templates/01_spi_epaper_controller/epaper_spi_stream_controller.sv \
 		sim/epaper_spi_stream_controller_tb.sv
 	$(VVP) /tmp/epaper_spi_stream_controller_tb.vvp
@@ -40,6 +41,12 @@ test-skid:
 		sim/rv_skid_buffer_tb.sv
 	$(VVP) /tmp/rv_skid_buffer_tb.vvp
 
+test-sync:
+	$(IVERILOG) -g2012 -o /tmp/sync_2ff_tb.vvp \
+		rtl/common/sync_2ff.sv \
+		sim/sync_2ff_tb.sv
+	$(VVP) /tmp/sync_2ff_tb.vvp
+
 clean:
 	rm -f /tmp/fb_1bpp_packer_tb.vvp
 	rm -f /tmp/serial_pin_capture_tb.vvp
@@ -47,3 +54,4 @@ clean:
 	rm -f /tmp/epaper_window_sequence_tb.vvp
 	rm -f /tmp/epaper_frame_fill_tb.vvp
 	rm -f /tmp/rv_skid_buffer_tb.vvp
+	rm -f /tmp/sync_2ff_tb.vvp

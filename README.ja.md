@@ -48,7 +48,8 @@ detail:
 - ピン変化の edge event 化
 - level 条件の false -> true 遷移検出
 - timestamp 付き event 出力
-- pending 中に追加 event が来た場合の sticky `overflow`
+- 小規模 FIFO による複数 pending event の保持
+- FIFO full 中に追加 event が来た場合の sticky `overflow`
 
 PCIe、USB high-speed、MIPI DSI などの高速差動リンクを直接観測する用途ではありません。
 
@@ -122,6 +123,18 @@ usecase:
 - ready経路の分離
 - 小規模なタイミング改善
 
+### sync_2ff
+
+path: `rtl/common/sync_2ff.sv`
+
+単一bitの非同期入力をローカルクロックへ取り込むための2段同期回路。
+
+usecase:
+
+- e-Paper `BUSY`
+- 外部トリガピン
+- 低速ステータス入力のクロックドメイン取り込み
+
 ## Test
 
 Icarus Verilog を使います。
@@ -146,16 +159,18 @@ make test-epaper
 make test-window
 make test-fill
 make test-skid
+make test-sync
 ```
 
 テスト対象:
 
 - `fb_1bpp_packer`: 1bpp pixel の byte pack
-- `serial_pin_capture`: edge event、level event、overflow
+- `serial_pin_capture`: edge event、level event、FIFO保持、overflow
 - `epaper_spi_stream_controller`: `{dc, byte}` の SPI 出力
 - `epaper_window_sequence`: window / cursor コマンド列
 - `epaper_frame_fill`: `0x24` と fill data の生成
 - `rv_skid_buffer`: backpressure 中の 1 word 保持
+- `sync_2ff`: 2段同期の挙動
 
 ## Caution
 

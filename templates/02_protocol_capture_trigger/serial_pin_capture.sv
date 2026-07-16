@@ -1,6 +1,7 @@
 module serial_pin_capture #(
     parameter int PIN_COUNT = 8,
-    parameter int TIMESTAMP_WIDTH = 32
+    parameter int TIMESTAMP_WIDTH = 32,
+    parameter int FIFO_DEPTH = 4
 ) (
     input  logic                  clk,
     input  logic                  rst_n,
@@ -17,6 +18,9 @@ module serial_pin_capture #(
 );
     localparam logic [7:0] EVENT_EDGE  = 8'h01;
     localparam logic [7:0] EVENT_LEVEL = 8'h02;
+    localparam int EVENT_WIDTH = TIMESTAMP_WIDTH + 16;
+    localparam int FIFO_PTR_WIDTH = (FIFO_DEPTH <= 1) ? 1 : $clog2(FIFO_DEPTH);
+    localparam int FIFO_COUNT_WIDTH = (FIFO_DEPTH <= 1) ? 2 : $clog2(FIFO_DEPTH + 1);
 
     logic [PIN_COUNT-1:0] pins_meta_q;
     logic [PIN_COUNT-1:0] pins_q;
@@ -24,10 +28,16 @@ module serial_pin_capture #(
     logic                 level_match_prev_q;
     logic [TIMESTAMP_WIDTH-1:0] timestamp_q;
 
-    logic pending_q, pending_d;
-    logic [TIMESTAMP_WIDTH+15:0] event_q, event_d;
+    logic [EVENT_WIDTH-1:0] fifo_q [0:FIFO_DEPTH-1];
+    logic [FIFO_PTR_WIDTH-1:0] rd_ptr_q;
+    logic [FIFO_PTR_WIDTH-1:0] wr_ptr_q;
+    logic [FIFO_COUNT_WIDTH-1:0] fifo_count_q;
     logic [7:0] pins_event;
-    logic overflow_d;
+    logic [EVENT_WIDTH-1:0] next_event;
+    logic event_fire;
+    logic fifo_pop;
+    logic fifo_push;
+    logic fifo_full;
 
     wire [PIN_COUNT-1:0] changed = (pins_q ^ pins_prev_q) & edge_enable_i;
     wire level_match = ((pins_q & level_mask_i) == (level_value_i & level_mask_i))
@@ -42,6 +52,9 @@ module serial_pin_capture #(
         if (TIMESTAMP_WIDTH < 1) begin
             $fatal(1, "TIMESTAMP_WIDTH must be greater than zero");
         end
+        if (FIFO_DEPTH < 1) begin
+            $fatal(1, "FIFO_DEPTH must be greater than zero");
+        end
     end
 `endif
 
@@ -53,39 +66,19 @@ module serial_pin_capture #(
     end
 
     always @* begin
-        pending_d = pending_q;
-        event_d = event_q;
-        overflow_d = overflow;
-
-        if (pending_q && event_ready) begin
-            pending_d = 1'b0;
-        end
-
-        if (!pending_d) begin
-            if (changed != '0) begin
-                pending_d = 1'b1;
-                event_d = {EVENT_EDGE, pins_event, timestamp_q};
-            end else if (level_enter) begin
-                pending_d = 1'b1;
-                event_d = {EVENT_LEVEL, pins_event, timestamp_q};
-            end
-        end else if ((changed != '0) || level_enter) begin
-            overflow_d = 1'b1;
-        end
-
-        if (pending_q && event_ready && ((changed != '0) || level_enter)) begin
-            if (changed != '0) begin
-                pending_d = 1'b1;
-                event_d = {EVENT_EDGE, pins_event, timestamp_q};
-            end else begin
-                pending_d = 1'b1;
-                event_d = {EVENT_LEVEL, pins_event, timestamp_q};
-            end
+        if (changed != '0) begin
+            next_event = {EVENT_EDGE, pins_event, timestamp_q};
+        end else begin
+            next_event = {EVENT_LEVEL, pins_event, timestamp_q};
         end
     end
 
-    assign event_valid = pending_q;
-    assign event_data = event_q;
+    assign event_fire = (changed != '0) || level_enter;
+    assign fifo_pop = event_valid && event_ready;
+    assign fifo_full = (fifo_count_q == FIFO_DEPTH);
+    assign fifo_push = event_fire && (!fifo_full || fifo_pop);
+    assign event_valid = (fifo_count_q != '0);
+    assign event_data = fifo_q[rd_ptr_q];
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -94,8 +87,12 @@ module serial_pin_capture #(
             pins_prev_q <= '0;
             level_match_prev_q <= 1'b0;
             timestamp_q <= '0;
-            pending_q <= 1'b0;
-            event_q <= '0;
+            rd_ptr_q <= '0;
+            wr_ptr_q <= '0;
+            fifo_count_q <= '0;
+            for (int i = 0; i < FIFO_DEPTH; i++) begin
+                fifo_q[i] <= '0;
+            end
             overflow <= 1'b0;
         end else begin
             pins_meta_q <= pins_i;
@@ -103,9 +100,31 @@ module serial_pin_capture #(
             pins_prev_q <= pins_q;
             level_match_prev_q <= level_match;
             timestamp_q <= timestamp_q + 1'b1;
-            pending_q <= pending_d;
-            event_q <= event_d;
-            overflow <= overflow_d;
+
+            if (fifo_pop) begin
+                if (rd_ptr_q == FIFO_DEPTH - 1) begin
+                    rd_ptr_q <= '0;
+                end else begin
+                    rd_ptr_q <= rd_ptr_q + 1'b1;
+                end
+            end
+
+            if (fifo_push) begin
+                fifo_q[wr_ptr_q] <= next_event;
+                if (wr_ptr_q == FIFO_DEPTH - 1) begin
+                    wr_ptr_q <= '0;
+                end else begin
+                    wr_ptr_q <= wr_ptr_q + 1'b1;
+                end
+            end else if (event_fire && fifo_full && !fifo_pop) begin
+                overflow <= 1'b1;
+            end
+
+            case ({fifo_push, fifo_pop})
+                2'b10: fifo_count_q <= fifo_count_q + 1'b1;
+                2'b01: fifo_count_q <= fifo_count_q - 1'b1;
+                default: fifo_count_q <= fifo_count_q;
+            endcase
         end
     end
 endmodule

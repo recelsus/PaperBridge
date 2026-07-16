@@ -42,6 +42,12 @@ RTL still owns pin-level timing.
 - Bytes are shifted MSB first.
 - `cs_n` is asserted while each byte is shifted and deasserted between bytes.
 
+## Busy Input
+
+`epd_busy` is treated as an asynchronous external input and synchronized through
+`sync_2ff` before it is used by the ready/valid control logic. Because of that,
+`in_ready` reflects busy changes after the synchronizer latency.
+
 ## Files
 
 - `epaper_spi_stream_controller.sv`: stream-to-SPI e-Paper pin controller.

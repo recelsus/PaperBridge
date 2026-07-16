@@ -13,7 +13,8 @@ module serial_pin_capture_tb;
 
     serial_pin_capture #(
         .PIN_COUNT(4),
-        .TIMESTAMP_WIDTH(32)
+        .TIMESTAMP_WIDTH(32),
+        .FIFO_DEPTH(2)
     ) dut (
         .clk(clk),
         .rst_n(rst_n),
@@ -99,9 +100,13 @@ module serial_pin_capture_tb;
         repeat (4) @(posedge clk);
         pins_i = 4'b0001;
         repeat (4) @(posedge clk);
+        pins_i = 4'b0000;
+        repeat (4) @(posedge clk);
+        pins_i = 4'b0001;
+        repeat (4) @(posedge clk);
 
         if (!overflow) begin
-            $fatal(1, "overflow was not set for event while pending");
+            $fatal(1, "overflow was not set when capture FIFO filled");
         end
 
         event_ready = 1'b1;

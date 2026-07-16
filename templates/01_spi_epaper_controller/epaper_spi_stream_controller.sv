@@ -50,8 +50,16 @@ module epaper_spi_stream_controller #(
     logic [7:0]             shreg_q, shreg_d;
     logic                   last_q, last_d;
     logic                   dc_q, dc_d;
+    logic                   epd_busy_sync;
 
     wire spi_tick = (spi_cnt_q == SPI_DIV - 1);
+
+    sync_2ff u_epd_busy_sync (
+        .clk(clk),
+        .rst_n(rst_n),
+        .async_i(epd_busy),
+        .sync_o(epd_busy_sync)
+    );
 
 `ifndef SYNTHESIS
     initial begin
@@ -112,7 +120,7 @@ module epaper_spi_stream_controller #(
             end
 
             ST_IDLE: begin
-                in_ready = !epd_busy;
+                in_ready = !epd_busy_sync;
                 if (in_valid && in_ready) begin
                     dc_d      = in_data[8];
                     shreg_d   = in_data[7:0];

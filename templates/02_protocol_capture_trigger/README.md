@@ -57,5 +57,13 @@ Transfer uses ready/valid.
   to true.
 - A level condition that remains true does not repeatedly emit events.
 - If a new event occurs while an older event is pending, the older event is
-  preserved and `overflow` is set.
+  preserved in FIFO order while space remains.
+- If a new event occurs while the FIFO is full, the new event is dropped and
+  `overflow` is set.
 - `overflow` is sticky until reset.
+
+## Parameters
+
+- `PIN_COUNT`: number of sampled pins, from 1 to 8.
+- `TIMESTAMP_WIDTH`: timestamp width stored in each event.
+- `FIFO_DEPTH`: number of event records held before overflow.
