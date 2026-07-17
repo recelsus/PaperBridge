@@ -67,3 +67,7 @@ Transfer uses ready/valid.
 - `PIN_COUNT`: number of sampled pins, from 1 to 8.
 - `TIMESTAMP_WIDTH`: timestamp width stored in each event.
 - `FIFO_DEPTH`: number of event records held before overflow.
+
+## Files
+
+- `../../rtl/capture/serial_pin_capture.sv`: reusable capture RTL.

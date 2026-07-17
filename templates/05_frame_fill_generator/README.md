@@ -19,3 +19,7 @@ Use this module for:
 - Producing deterministic traffic for SPI capture templates.
 
 Verify the RAM write command and byte polarity against the target panel.
+
+## Files
+
+- `../../rtl/epaper/epaper_frame_fill.sv`: reusable frame fill RTL.

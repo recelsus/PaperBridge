@@ -19,6 +19,7 @@ Software and RTL responsibilities are separated.
 - `rtl/`: reusable RTL modules
 - `templates/`: learning, bring-up, and experiment templates
 - `sim/`: simple Icarus Verilog testbenches
+- `paperbridge.f`: RTL file list for external tools and projects
 
 ## Templates
 
@@ -27,6 +28,7 @@ Software and RTL responsibilities are separated.
 Path: `templates/01_spi_epaper_controller`
 
 Template for SPI-connected e-Paper panels and Waveshare-like modules.
+Reusable RTL: `rtl/epaper/epaper_spi_stream_controller.sv`
 
 Details:
 
@@ -41,6 +43,7 @@ Details:
 Path: `templates/02_protocol_capture_trigger`
 
 Template for observing low-speed signals on existing devices or adapter boards.
+Reusable RTL: `rtl/capture/serial_pin_capture.sv`
 
 Targets:
 
@@ -67,6 +70,7 @@ Path: `templates/03_framebuffer_packer`
 
 Template for converting a 1bpp pixel stream into a packed-byte format commonly
 used by e-Paper panels.
+Reusable RTL: `rtl/framebuffer/fb_1bpp_packer.sv`
 
 Details:
 
@@ -82,6 +86,7 @@ Path: `templates/04_panel_command_builder`
 
 Template for generating window/cursor setup command streams commonly seen on
 controller-style e-Paper panels.
+Reusable RTL: `rtl/epaper/epaper_window_sequence.sv`
 
 Details:
 
@@ -99,6 +104,7 @@ Path: `templates/05_frame_fill_generator`
 
 Template for filling frame RAM with a constant byte during bring-up and wiring
 checks.
+Reusable RTL: `rtl/epaper/epaper_frame_fill.sv`
 
 Details:
 

@@ -6,32 +6,32 @@ test: test-packer test-capture test-epaper test-window test-fill test-skid test-
 
 test-packer:
 	$(IVERILOG) -g2012 -o /tmp/fb_1bpp_packer_tb.vvp \
-		templates/03_framebuffer_packer/fb_1bpp_packer.sv \
+		rtl/framebuffer/fb_1bpp_packer.sv \
 		sim/fb_1bpp_packer_tb.sv
 	$(VVP) /tmp/fb_1bpp_packer_tb.vvp
 
 test-capture:
 	$(IVERILOG) -g2012 -o /tmp/serial_pin_capture_tb.vvp \
-		templates/02_protocol_capture_trigger/serial_pin_capture.sv \
+		rtl/capture/serial_pin_capture.sv \
 		sim/serial_pin_capture_tb.sv
 	$(VVP) /tmp/serial_pin_capture_tb.vvp
 
 test-epaper:
 	$(IVERILOG) -g2012 -o /tmp/epaper_spi_stream_controller_tb.vvp \
 		rtl/common/sync_2ff.sv \
-		templates/01_spi_epaper_controller/epaper_spi_stream_controller.sv \
+		rtl/epaper/epaper_spi_stream_controller.sv \
 		sim/epaper_spi_stream_controller_tb.sv
 	$(VVP) /tmp/epaper_spi_stream_controller_tb.vvp
 
 test-window:
 	$(IVERILOG) -g2012 -o /tmp/epaper_window_sequence_tb.vvp \
-		templates/04_panel_command_builder/epaper_window_sequence.sv \
+		rtl/epaper/epaper_window_sequence.sv \
 		sim/epaper_window_sequence_tb.sv
 	$(VVP) /tmp/epaper_window_sequence_tb.vvp
 
 test-fill:
 	$(IVERILOG) -g2012 -o /tmp/epaper_frame_fill_tb.vvp \
-		templates/05_frame_fill_generator/epaper_frame_fill.sv \
+		rtl/epaper/epaper_frame_fill.sv \
 		sim/epaper_frame_fill_tb.sv
 	$(VVP) /tmp/epaper_frame_fill_tb.vvp
 
@@ -50,7 +50,7 @@ test-sync:
 test-bad-params:
 	$(IVERILOG) -g2012 -o /tmp/epaper_spi_bad_param_tb.vvp \
 		rtl/common/sync_2ff.sv \
-		templates/01_spi_epaper_controller/epaper_spi_stream_controller.sv \
+		rtl/epaper/epaper_spi_stream_controller.sv \
 		sim/epaper_spi_bad_param_tb.sv
 	@if $(VVP) /tmp/epaper_spi_bad_param_tb.vvp >/tmp/epaper_spi_bad_param_tb.log 2>&1; then \
 		cat /tmp/epaper_spi_bad_param_tb.log; \
@@ -60,7 +60,7 @@ test-bad-params:
 		cat /tmp/epaper_spi_bad_param_tb.log; \
 	fi
 	$(IVERILOG) -g2012 -o /tmp/serial_pin_capture_bad_param_tb.vvp \
-		templates/02_protocol_capture_trigger/serial_pin_capture.sv \
+		rtl/capture/serial_pin_capture.sv \
 		sim/serial_pin_capture_bad_param_tb.sv
 	@if $(VVP) /tmp/serial_pin_capture_bad_param_tb.vvp >/tmp/serial_pin_capture_bad_param_tb.log 2>&1; then \
 		cat /tmp/serial_pin_capture_bad_param_tb.log; \

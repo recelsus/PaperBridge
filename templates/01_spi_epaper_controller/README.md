@@ -50,4 +50,4 @@ RTL still owns pin-level timing.
 
 ## Files
 
-- `epaper_spi_stream_controller.sv`: stream-to-SPI e-Paper pin controller.
+- `../../rtl/epaper/epaper_spi_stream_controller.sv`: stream-to-SPI e-Paper pin controller.

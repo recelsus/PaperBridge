@@ -24,3 +24,7 @@ SSD16xx/UC81xx-style starting point and verify against the target panel.
 
 Output is the same 9-bit `{dc, byte}` format used by
 `epaper_spi_stream_controller`.
+
+## Files
+
+- `../../rtl/epaper/epaper_window_sequence.sv`: reusable window/cursor sequence RTL.

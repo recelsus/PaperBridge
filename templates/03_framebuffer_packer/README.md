@@ -37,6 +37,10 @@ Output:
 
 This is the common packing style used by many monochrome display controllers.
 
+## Files
+
+- `../../rtl/framebuffer/fb_1bpp_packer.sv`: reusable framebuffer packing RTL.
+
 ## Timing and Partial Byte Rules
 
 - The first pixel in a byte is placed at bit 7.
