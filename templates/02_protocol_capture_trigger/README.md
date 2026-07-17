@@ -30,6 +30,8 @@ SystemVerilog should handle:
 
 - Precise pin sampling.
 - Edge detection.
+- Per-pin rising/falling edge selection.
+- Arm/disarm control.
 - Timestamping.
 - Trigger filtering.
 - Compact event output.
@@ -52,7 +54,12 @@ Transfer uses ready/valid.
 
 ## Trigger and Loss Behavior
 
-- Edge events are generated when any enabled pin changes.
+- `edge_enable_i` is the compatibility input for both-edge detection.
+- `rising_enable_i` enables rising-edge detection per pin.
+- `falling_enable_i` enables falling-edge detection per pin.
+- Edge events are generated when any enabled edge condition matches.
+- `arm_i=0` suppresses new events while timestamping and input synchronization
+  continue.
 - Level events are generated only when the level condition changes from false
   to true.
 - A level condition that remains true does not repeatedly emit events.

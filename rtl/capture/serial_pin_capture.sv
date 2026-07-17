@@ -8,8 +8,11 @@ module serial_pin_capture #(
 
     input  logic [PIN_COUNT-1:0]  pins_i,
     input  logic [PIN_COUNT-1:0]  edge_enable_i,
+    input  logic [PIN_COUNT-1:0]  rising_enable_i,
+    input  logic [PIN_COUNT-1:0]  falling_enable_i,
     input  logic [PIN_COUNT-1:0]  level_mask_i,
     input  logic [PIN_COUNT-1:0]  level_value_i,
+    input  logic                  arm_i,
 
     output logic                  event_valid,
     input  logic                  event_ready,
@@ -39,7 +42,11 @@ module serial_pin_capture #(
     logic fifo_push;
     logic fifo_full;
 
-    wire [PIN_COUNT-1:0] changed = (pins_q ^ pins_prev_q) & edge_enable_i;
+    wire [PIN_COUNT-1:0] rising_enabled = rising_enable_i | edge_enable_i;
+    wire [PIN_COUNT-1:0] falling_enabled = falling_enable_i | edge_enable_i;
+    wire [PIN_COUNT-1:0] rising_edge = pins_q & ~pins_prev_q & rising_enabled;
+    wire [PIN_COUNT-1:0] falling_edge = ~pins_q & pins_prev_q & falling_enabled;
+    wire [PIN_COUNT-1:0] edge_hit = rising_edge | falling_edge;
     wire level_match = ((pins_q & level_mask_i) == (level_value_i & level_mask_i))
                     && (level_mask_i != '0);
     wire level_enter = level_match && !level_match_prev_q;
@@ -66,14 +73,14 @@ module serial_pin_capture #(
     end
 
     always @* begin
-        if (changed != '0) begin
+        if (edge_hit != '0) begin
             next_event = {EVENT_EDGE, pins_event, timestamp_q};
         end else begin
             next_event = {EVENT_LEVEL, pins_event, timestamp_q};
         end
     end
 
-    assign event_fire = (changed != '0) || level_enter;
+    assign event_fire = arm_i && ((edge_hit != '0) || level_enter);
     assign fifo_pop = event_valid && event_ready;
     assign fifo_full = (fifo_count_q == FIFO_DEPTH);
     assign fifo_push = event_fire && (!fifo_full || fifo_pop);

@@ -55,6 +55,8 @@ Targets:
 Details:
 
 - Converts pin changes into edge events
+- Supports separate rising-edge and falling-edge enables
+- Supports `arm_i` capture enable
 - Detects false-to-true level condition transitions
 - Emits timestamped events
 - Holds multiple pending events in a small FIFO

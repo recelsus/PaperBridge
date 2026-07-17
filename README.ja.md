@@ -49,6 +49,8 @@ target:
 detail:
 
 - ピン変化の edge event 化
+- rising edge / falling edge の個別 enable
+- `arm_i` による capture enable
 - level 条件の false -> true 遷移検出
 - timestamp 付き event 出力
 - 小規模 FIFO による複数 pending event の保持

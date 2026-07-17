@@ -4,8 +4,11 @@ module serial_pin_capture_tb;
 
     logic [3:0] pins_i;
     logic [3:0] edge_enable_i;
+    logic [3:0] rising_enable_i;
+    logic [3:0] falling_enable_i;
     logic [3:0] level_mask_i;
     logic [3:0] level_value_i;
+    logic arm_i;
     logic event_valid;
     logic event_ready;
     logic [47:0] event_data;
@@ -17,6 +20,7 @@ module serial_pin_capture_tb;
     logic wrap_overflow;
     logic [3:0] wrap_ts0;
     logic [3:0] wrap_ts1;
+    int wrap_guard;
 
     serial_pin_capture #(
         .PIN_COUNT(4),
@@ -27,8 +31,11 @@ module serial_pin_capture_tb;
         .rst_n(rst_n),
         .pins_i(pins_i),
         .edge_enable_i(edge_enable_i),
+        .rising_enable_i(rising_enable_i),
+        .falling_enable_i(falling_enable_i),
         .level_mask_i(level_mask_i),
         .level_value_i(level_value_i),
+        .arm_i(arm_i),
         .event_valid(event_valid),
         .event_ready(event_ready),
         .event_data(event_data),
@@ -43,9 +50,12 @@ module serial_pin_capture_tb;
         .clk(clk),
         .rst_n(rst_n),
         .pins_i(wrap_pins_i),
-        .edge_enable_i(2'b01),
+        .edge_enable_i(2'b00),
+        .rising_enable_i(2'b01),
+        .falling_enable_i(2'b00),
         .level_mask_i(2'b00),
         .level_value_i(2'b00),
+        .arm_i(1'b1),
         .event_valid(wrap_event_valid),
         .event_ready(wrap_event_ready),
         .event_data(wrap_event_data),
@@ -62,11 +72,15 @@ module serial_pin_capture_tb;
     initial begin
         pins_i = 4'b0000;
         edge_enable_i = 4'b0001;
+        rising_enable_i = 4'b0000;
+        falling_enable_i = 4'b0000;
         level_mask_i = 4'b0000;
         level_value_i = 4'b0000;
+        arm_i = 1'b1;
         event_ready = 1'b0;
         wrap_pins_i = 2'b00;
         wrap_event_ready = 1'b0;
+        wrap_guard = 0;
 
         repeat (4) @(posedge clk);
         rst_n = 1'b1;
@@ -91,6 +105,66 @@ module serial_pin_capture_tb;
         @(posedge clk);
         event_ready = 1'b0;
         wait (!event_valid);
+
+        edge_enable_i = 4'b0000;
+        rising_enable_i = 4'b0001;
+        falling_enable_i = 4'b0000;
+        pins_i = 4'b0000;
+        repeat (5) @(posedge clk);
+        pins_i = 4'b0001;
+        wait (event_valid);
+        if (event_data[47:40] != 8'h01 || event_data[35:32] != 4'b0001) begin
+            $fatal(1, "rising-only event failed: %08h", event_data);
+        end
+        event_ready = 1'b1;
+        @(posedge clk);
+        event_ready = 1'b0;
+        wait (!event_valid);
+        pins_i = 4'b0000;
+        repeat (5) @(posedge clk);
+        if (event_valid) begin
+            $fatal(1, "falling edge fired while only rising was enabled");
+        end
+
+        rising_enable_i = 4'b0000;
+        falling_enable_i = 4'b0001;
+        pins_i = 4'b0001;
+        repeat (5) @(posedge clk);
+        if (event_valid) begin
+            $fatal(1, "rising edge fired while only falling was enabled");
+        end
+        pins_i = 4'b0000;
+        wait (event_valid);
+        if (event_data[47:40] != 8'h01 || event_data[35:32] != 4'b0000) begin
+            $fatal(1, "falling-only event failed: %08h", event_data);
+        end
+        event_ready = 1'b1;
+        @(posedge clk);
+        event_ready = 1'b0;
+        wait (!event_valid);
+
+        arm_i = 1'b0;
+        pins_i = 4'b0001;
+        repeat (5) @(posedge clk);
+        pins_i = 4'b0000;
+        repeat (5) @(posedge clk);
+        if (event_valid) begin
+            $fatal(1, "event fired while capture was disarmed");
+        end
+        rising_enable_i = 4'b0001;
+        falling_enable_i = 4'b0000;
+        arm_i = 1'b1;
+        pins_i = 4'b0001;
+        wait (event_valid);
+        if (event_data[47:40] != 8'h01 || event_data[35:32] != 4'b0001) begin
+            $fatal(1, "event did not fire after re-arming: %08h", event_data);
+        end
+        event_ready = 1'b1;
+        @(posedge clk);
+        event_ready = 1'b0;
+        wait (!event_valid);
+        falling_enable_i = 4'b0000;
+        edge_enable_i = 4'b0001;
 
         edge_enable_i = 4'b0000;
         pins_i = 4'b0000;
@@ -192,11 +266,22 @@ module serial_pin_capture_tb;
 
         wrap_pins_i = 2'b00;
         wrap_event_ready = 1'b1;
-        repeat (20) @(posedge clk);
-        wrap_pins_i = 2'b01;
-        wait (wrap_event_valid);
-        @(negedge clk);
-        wrap_ts0 = wrap_event_data[3:0];
+        wrap_ts0 = 4'h0;
+        while (wrap_ts0 < 4'hc && wrap_guard < 32) begin
+            wrap_pins_i = 2'b00;
+            repeat (3) @(posedge clk);
+            wrap_pins_i = 2'b01;
+            wait (wrap_event_valid);
+            @(negedge clk);
+            wrap_ts0 = wrap_event_data[3:0];
+            @(posedge clk);
+            wait (!wrap_event_valid);
+            wrap_guard = wrap_guard + 1;
+        end
+        if (wrap_guard >= 32) begin
+            $fatal(1, "could not reach high timestamp before wrap check");
+        end
+
         wrap_pins_i = 2'b00;
         repeat (18) @(posedge clk);
         wrap_pins_i = 2'b01;
