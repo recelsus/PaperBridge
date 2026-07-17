@@ -154,6 +154,20 @@ Use cases:
 - External trigger pins
 - Slow status inputs crossing into the local clock domain
 
+### spi_tx
+
+Path: `rtl/spi/spi_tx.sv`
+
+8-bit MSB-first SPI transmitter used by the e-Paper stream controller.
+
+Current scope:
+
+- Fixed SPI mode 0
+- One byte per transfer
+- Ready/valid input
+- Byte-scoped chip select
+- Registered `transfer_done`
+
 ## Test
 
 Icarus Verilog is used for the current tests.
@@ -192,6 +206,7 @@ Test coverage:
 - `epaper_frame_fill`: `0x24` and fill data generation
 - `rv_skid_buffer`: one-word holding under backpressure
 - `sync_2ff`: two-stage synchronization behavior
+- `spi_tx`: covered through `epaper_spi_stream_controller`
 - bad-parameter tests: expected `$fatal` behavior for invalid module parameters
 
 ## Caution

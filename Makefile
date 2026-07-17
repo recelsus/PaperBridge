@@ -19,6 +19,7 @@ test-capture:
 test-epaper:
 	$(IVERILOG) -g2012 -o /tmp/epaper_spi_stream_controller_tb.vvp \
 		rtl/common/sync_2ff.sv \
+		rtl/spi/spi_tx.sv \
 		rtl/epaper/epaper_spi_stream_controller.sv \
 		sim/epaper_spi_stream_controller_tb.sv
 	$(VVP) /tmp/epaper_spi_stream_controller_tb.vvp
@@ -50,6 +51,7 @@ test-sync:
 test-bad-params:
 	$(IVERILOG) -g2012 -o /tmp/epaper_spi_bad_param_tb.vvp \
 		rtl/common/sync_2ff.sv \
+		rtl/spi/spi_tx.sv \
 		rtl/epaper/epaper_spi_stream_controller.sv \
 		sim/epaper_spi_bad_param_tb.sv
 	@if $(VVP) /tmp/epaper_spi_bad_param_tb.vvp >/tmp/epaper_spi_bad_param_tb.log 2>&1; then \

@@ -141,6 +141,20 @@ usecase:
 - 外部トリガピン
 - 低速ステータス入力のクロックドメイン取り込み
 
+### spi_tx
+
+path: `rtl/spi/spi_tx.sv`
+
+e-Paper stream controller から利用する 8bit MSB-first の SPI transmitter。
+
+現在の範囲:
+
+- 固定 SPI mode 0
+- 1転送 1 byte
+- ready/valid input
+- byte単位の chip select
+- レジスタ化された `transfer_done`
+
 ## Test
 
 Icarus Verilog を使います。
@@ -178,6 +192,7 @@ make test-bad-params
 - `epaper_frame_fill`: `0x24` と fill data の生成
 - `rv_skid_buffer`: backpressure 中の 1 word 保持
 - `sync_2ff`: 2段同期の挙動
+- `spi_tx`: `epaper_spi_stream_controller` 経由で検証
 - bad-parameter tests: 不正パラメータで期待通り `$fatal` すること
 
 ## Caution

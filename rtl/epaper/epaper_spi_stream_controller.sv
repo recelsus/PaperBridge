@@ -21,8 +21,6 @@ module epaper_spi_stream_controller #(
 
     output logic       frame_done
 );
-    localparam int SPI_DIV = (CLK_HZ + (2 * SPI_HZ) - 1) / (2 * SPI_HZ);
-    localparam int SPI_DIV_W = (SPI_DIV <= 1) ? 1 : $clog2(SPI_DIV);
     localparam longint RESET_LOW_CYCLES = (RESET_LOW_US == 0)
                                         ? 0
                                         : ((longint'(CLK_HZ) * longint'(RESET_LOW_US)) + 999_999) / 1_000_000;
@@ -38,27 +36,42 @@ module epaper_spi_stream_controller #(
         ST_RESET_LOW,
         ST_RESET_HIGH,
         ST_IDLE,
-        ST_SHIFT_LOW,
-        ST_SHIFT_HIGH
+        ST_START_SPI,
+        ST_WAIT_SPI
     } state_t;
 
     state_t state_q, state_d;
 
     logic [RESET_CNT_W-1:0] reset_cnt_q, reset_cnt_d;
-    logic [SPI_DIV_W-1:0]   spi_cnt_q, spi_cnt_d;
-    logic [2:0]             bit_cnt_q, bit_cnt_d;
-    logic [7:0]             shreg_q, shreg_d;
     logic                   last_q, last_d;
     logic                   dc_q, dc_d;
     logic                   epd_busy_sync;
-
-    wire spi_tick = (spi_cnt_q == SPI_DIV - 1);
+    logic                   spi_in_valid;
+    logic                   spi_in_ready;
+    logic                   spi_busy;
+    logic                   spi_transfer_done;
 
     sync_2ff u_epd_busy_sync (
         .clk(clk),
         .rst_n(rst_n),
         .async_i(epd_busy),
         .sync_o(epd_busy_sync)
+    );
+
+    spi_tx #(
+        .CLK_HZ(CLK_HZ),
+        .SPI_HZ(SPI_HZ)
+    ) u_spi_tx (
+        .clk(clk),
+        .rst_n(rst_n),
+        .in_valid(spi_in_valid),
+        .in_ready(spi_in_ready),
+        .in_data(in_data[7:0]),
+        .spi_cs_n(epd_cs_n),
+        .spi_sclk(epd_sclk),
+        .spi_mosi(epd_mosi),
+        .busy(spi_busy),
+        .transfer_done(spi_transfer_done)
     );
 
 `ifndef SYNTHESIS
@@ -84,19 +97,14 @@ module epaper_spi_stream_controller #(
     always @* begin
         state_d     = state_q;
         reset_cnt_d = reset_cnt_q;
-        spi_cnt_d   = spi_cnt_q;
-        bit_cnt_d   = bit_cnt_q;
-        shreg_d     = shreg_q;
         last_d      = last_q;
         dc_d        = dc_q;
 
         in_ready    = 1'b0;
-        epd_cs_n    = 1'b1;
-        epd_sclk    = 1'b0;
-        epd_mosi    = shreg_q[7];
         epd_dc      = dc_q;
         epd_rst_n   = 1'b1;
         frame_done  = 1'b0;
+        spi_in_valid = 1'b0;
 
         case (state_q)
             ST_RESET_LOW: begin
@@ -120,45 +128,25 @@ module epaper_spi_stream_controller #(
             end
 
             ST_IDLE: begin
-                in_ready = !epd_busy_sync;
+                in_ready = !epd_busy_sync && spi_in_ready;
                 if (in_valid && in_ready) begin
                     dc_d      = in_data[8];
-                    shreg_d   = in_data[7:0];
                     last_d    = in_last;
-                    bit_cnt_d = 3'd7;
-                    spi_cnt_d = '0;
-                    state_d   = ST_SHIFT_LOW;
+                    state_d   = ST_START_SPI;
                 end
             end
 
-            ST_SHIFT_LOW: begin
-                epd_cs_n = 1'b0;
-                epd_sclk = 1'b0;
-                if (spi_tick) begin
-                    spi_cnt_d = '0;
-                    state_d = ST_SHIFT_HIGH;
-                end else begin
-                    spi_cnt_d = spi_cnt_q + 1'b1;
-                end
+            ST_START_SPI: begin
+                spi_in_valid = 1'b1;
+                state_d = ST_WAIT_SPI;
             end
 
-            ST_SHIFT_HIGH: begin
-                epd_cs_n = 1'b0;
-                epd_sclk = 1'b1;
-                if (spi_tick) begin
-                    spi_cnt_d = '0;
-                    if (bit_cnt_q == 3'd0) begin
-                        state_d = ST_IDLE;
-                        if (last_q) begin
-                            frame_done = 1'b1;
-                        end
-                    end else begin
-                        bit_cnt_d = bit_cnt_q - 1'b1;
-                        shreg_d = {shreg_q[6:0], 1'b0};
-                        state_d = ST_SHIFT_LOW;
+            ST_WAIT_SPI: begin
+                if (spi_transfer_done) begin
+                    state_d = ST_IDLE;
+                    if (last_q) begin
+                        frame_done = 1'b1;
                     end
-                end else begin
-                    spi_cnt_d = spi_cnt_q + 1'b1;
                 end
             end
 
@@ -170,17 +158,11 @@ module epaper_spi_stream_controller #(
         if (!rst_n) begin
             state_q     <= ST_RESET_LOW;
             reset_cnt_q <= '0;
-            spi_cnt_q   <= '0;
-            bit_cnt_q   <= '0;
-            shreg_q     <= '0;
             last_q      <= 1'b0;
             dc_q        <= 1'b0;
         end else begin
             state_q     <= state_d;
             reset_cnt_q <= reset_cnt_d;
-            spi_cnt_q   <= spi_cnt_d;
-            bit_cnt_q   <= bit_cnt_d;
-            shreg_q     <= shreg_d;
             last_q      <= last_d;
             dc_q        <= dc_d;
         end
