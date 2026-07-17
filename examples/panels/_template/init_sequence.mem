@@ -1,0 +1,11 @@
+# op data
+# 0 = command
+# 1 = data
+# 2 = delay cycles
+# 3 = wait until busy is idle
+# 7 = end
+#
+# Replace this with the smallest known-good sequence for the target panel.
+0 12
+3 00
+7 00

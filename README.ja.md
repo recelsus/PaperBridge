@@ -12,6 +12,7 @@ e-Ink/e-Paper系デバイスアダプタのハードウェア処理をSystemVeri
 
 - `rtl/`: 再利用可能な RTLモジュール
 - `templates/`: 学習・bring-up・実験用テンプレート
+- `examples/`: panel profile や sequence を追加するための出発点
 - `sim/`: Icarus Verilog 向けの簡易テストベンチ
 - `paperbridge.f`: 外部ツールや外部プロジェクト向けの RTL ファイルリスト
 

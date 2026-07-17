@@ -1,0 +1,24 @@
+# Generic SSD16xx-like 2.13 inch starting sequence.
+# op data
+# 0 = command, 1 = data, 2 = delay cycles, 3 = wait idle, 7 = end
+#
+# This sequence is intentionally small. Add panel-specific voltage, LUT,
+# border, and refresh settings only after verifying the target hardware.
+0 12
+3 00
+0 11
+1 03
+0 44
+1 00
+1 0f
+0 45
+1 00
+1 00
+1 f9
+1 00
+0 4e
+1 00
+0 4f
+1 00
+1 00
+7 00

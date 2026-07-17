@@ -18,6 +18,7 @@ Software and RTL responsibilities are separated.
 
 - `rtl/`: reusable RTL modules
 - `templates/`: learning, bring-up, and experiment templates
+- `examples/`: copyable panel-profile and sequence starting points
 - `sim/`: simple Icarus Verilog testbenches
 - `paperbridge.f`: RTL file list for external tools and projects
 
