@@ -1,8 +1,8 @@
 IVERILOG ?= iverilog
 VVP ?= vvp
 
-.PHONY: test test-packer test-capture test-epaper test-window test-fill test-skid test-sync clean
-test: test-packer test-capture test-epaper test-window test-fill test-skid test-sync
+.PHONY: test test-packer test-capture test-epaper test-window test-fill test-skid test-sync test-bad-params clean
+test: test-packer test-capture test-epaper test-window test-fill test-skid test-sync test-bad-params
 
 test-packer:
 	$(IVERILOG) -g2012 -o /tmp/fb_1bpp_packer_tb.vvp \
@@ -47,6 +47,29 @@ test-sync:
 		sim/sync_2ff_tb.sv
 	$(VVP) /tmp/sync_2ff_tb.vvp
 
+test-bad-params:
+	$(IVERILOG) -g2012 -o /tmp/epaper_spi_bad_param_tb.vvp \
+		rtl/common/sync_2ff.sv \
+		templates/01_spi_epaper_controller/epaper_spi_stream_controller.sv \
+		sim/epaper_spi_bad_param_tb.sv
+	@if $(VVP) /tmp/epaper_spi_bad_param_tb.vvp >/tmp/epaper_spi_bad_param_tb.log 2>&1; then \
+		cat /tmp/epaper_spi_bad_param_tb.log; \
+		echo "expected epaper bad parameter simulation to fail"; \
+		exit 1; \
+	else \
+		cat /tmp/epaper_spi_bad_param_tb.log; \
+	fi
+	$(IVERILOG) -g2012 -o /tmp/serial_pin_capture_bad_param_tb.vvp \
+		templates/02_protocol_capture_trigger/serial_pin_capture.sv \
+		sim/serial_pin_capture_bad_param_tb.sv
+	@if $(VVP) /tmp/serial_pin_capture_bad_param_tb.vvp >/tmp/serial_pin_capture_bad_param_tb.log 2>&1; then \
+		cat /tmp/serial_pin_capture_bad_param_tb.log; \
+		echo "expected capture bad parameter simulation to fail"; \
+		exit 1; \
+	else \
+		cat /tmp/serial_pin_capture_bad_param_tb.log; \
+	fi
+
 clean:
 	rm -f /tmp/fb_1bpp_packer_tb.vvp
 	rm -f /tmp/serial_pin_capture_tb.vvp
@@ -55,3 +78,7 @@ clean:
 	rm -f /tmp/epaper_frame_fill_tb.vvp
 	rm -f /tmp/rv_skid_buffer_tb.vvp
 	rm -f /tmp/sync_2ff_tb.vvp
+	rm -f /tmp/epaper_spi_bad_param_tb.vvp
+	rm -f /tmp/serial_pin_capture_bad_param_tb.vvp
+	rm -f /tmp/epaper_spi_bad_param_tb.log
+	rm -f /tmp/serial_pin_capture_bad_param_tb.log

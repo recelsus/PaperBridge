@@ -173,17 +173,20 @@ make test-window
 make test-fill
 make test-skid
 make test-sync
+make test-bad-params
 ```
 
 Test coverage:
 
 - `fb_1bpp_packer`: byte packing for 1bpp pixels
 - `serial_pin_capture`: edge events, level events, FIFO holding, and overflow
-- `epaper_spi_stream_controller`: SPI output for `{dc, byte}` streams
+- `epaper_spi_stream_controller`: SPI output, reset timing, busy handling,
+  command/data switching, and SPI clock period for `{dc, byte}` streams
 - `epaper_window_sequence`: window/cursor command streams
 - `epaper_frame_fill`: `0x24` and fill data generation
 - `rv_skid_buffer`: one-word holding under backpressure
 - `sync_2ff`: two-stage synchronization behavior
+- bad-parameter tests: expected `$fatal` behavior for invalid module parameters
 
 ## Caution
 

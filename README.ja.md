@@ -160,17 +160,19 @@ make test-window
 make test-fill
 make test-skid
 make test-sync
+make test-bad-params
 ```
 
 テスト対象:
 
 - `fb_1bpp_packer`: 1bpp pixel の byte pack
 - `serial_pin_capture`: edge event、level event、FIFO保持、overflow
-- `epaper_spi_stream_controller`: `{dc, byte}` の SPI 出力
+- `epaper_spi_stream_controller`: `{dc, byte}` の SPI 出力、reset timing、busy handling、command/data切替、SPI clock period
 - `epaper_window_sequence`: window / cursor コマンド列
 - `epaper_frame_fill`: `0x24` と fill data の生成
 - `rv_skid_buffer`: backpressure 中の 1 word 保持
 - `sync_2ff`: 2段同期の挙動
+- bad-parameter tests: 不正パラメータで期待通り `$fatal` すること
 
 ## Caution
 

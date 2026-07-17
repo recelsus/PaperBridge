@@ -22,6 +22,10 @@ module epaper_spi_stream_controller_tb;
     int sampled_byte_count;
     int reset_low_count;
     int reset_high_wait_count;
+    int clk_cycle_count;
+    int last_sclk_rise_cycle;
+    int sclk_rise_delta;
+    int sclk_rise_checks;
 
     epaper_spi_stream_controller #(
         .CLK_HZ(1_000_000),
@@ -46,6 +50,10 @@ module epaper_spi_stream_controller_tb;
 
     always #5 clk = ~clk;
 
+    always @(posedge clk) begin
+        clk_cycle_count <= clk_cycle_count + 1;
+    end
+
     initial begin
         #100000;
         $fatal(1, "test timeout");
@@ -54,6 +62,16 @@ module epaper_spi_stream_controller_tb;
     always @(negedge clk) begin
         epd_sclk_q <= epd_sclk;
         if (!epd_cs_n && epd_sclk && !epd_sclk_q) begin
+            if (last_sclk_rise_cycle >= 0 && (sampled_count % 8) != 0) begin
+                sclk_rise_delta = clk_cycle_count - last_sclk_rise_cycle;
+                if (sclk_rise_delta != 4) begin
+                    $fatal(1, "unexpected SCLK rising-edge period: %0d cycles",
+                           sclk_rise_delta);
+                end
+                sclk_rise_checks = sclk_rise_checks + 1;
+            end
+            last_sclk_rise_cycle = clk_cycle_count;
+
             if ((sampled_count % 8) == 0) begin
                 sampled_dc[sampled_byte_count] = epd_dc;
             end
@@ -91,6 +109,10 @@ module epaper_spi_stream_controller_tb;
         sampled_byte_count = 0;
         reset_low_count = 0;
         reset_high_wait_count = 0;
+        clk_cycle_count = 0;
+        last_sclk_rise_cycle = -1;
+        sclk_rise_delta = 0;
+        sclk_rise_checks = 0;
         for (int i = 0; i < 4; i++) begin
             sampled_bytes[i] = '0;
             sampled_dc[i] = 1'b0;
@@ -138,6 +160,9 @@ module epaper_spi_stream_controller_tb;
 
         if (sampled_byte_count != 2) begin
             $fatal(1, "unexpected spi byte count: %0d", sampled_byte_count);
+        end
+        if (sclk_rise_checks < 14) begin
+            $fatal(1, "too few SCLK period checks: %0d", sclk_rise_checks);
         end
 
         if (sampled_bytes[0] != 8'h12 || sampled_dc[0] != 1'b0) begin
