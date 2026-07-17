@@ -105,6 +105,76 @@ detail:
 
 対象パネルで`0x24`が画像RAM 書き込みであるか、byteの白黒極性がどうなっているかは要確認。
 
+### 06: Panel Profile Constants
+
+path: `templates/06_panel_profile_constants`
+
+よく使われる e-Paper command 値と小型パネルの geometry 値を再利用しやすい形で置くテンプレート。
+再利用 RTL: `rtl/epaper/epaper_panel_profile_pkg.sv`
+
+detail:
+
+- `0x12`, `0x20`, `0x22`, `0x24`, `0x26`, `0x44`, `0x45`, `0x4E`, `0x4F` などのよくある command 値
+- 2.13 inch、2.9 inch、4.2 inch class の代表的な寸法
+- 完全な device database ではなく、実用的な初期値
+
+### 07: Command Sequence Player
+
+path: `templates/07_command_sequence_player`
+
+command / data / delay / wait token を `{dc, byte}` stream に変換するテンプレート。
+再利用 RTL: `rtl/epaper/epaper_command_sequence_player.sv`
+
+detail:
+
+- command byte / data byte の出力
+- 固定 clock cycle delay
+- busy解除待ち token
+- end token 消費時の `done` pulse
+
+### 08: Frame Pattern Generator
+
+path: `templates/08_frame_pattern_generator`
+
+host framebuffer なしで deterministic な `0x24` frame RAM 書き込みを生成するテンプレート。
+再利用 RTL: `rtl/epaper/epaper_pattern_generator.sv`
+
+detail:
+
+- fill byte
+- checker byte
+- vertical stripes
+- horizontal stripes
+- walking one bit
+
+### 09: e-Paper Bring-up Top
+
+path: `templates/09_epaper_bringup_top`
+
+reset、frame fill、SPI stream output を接続した小さな bring-up top テンプレート。
+再利用 RTL: `rtl/epaper/epaper_bringup_fill_top.sv`
+
+detail:
+
+- reset timing の実行
+- `0x24` fill transaction の送信
+- SPI mode 0 panel pin の駆動
+- full initialization や refresh policy はこのテンプレート外
+
+### 10: SPI Capture Decoder
+
+path: `templates/10_spi_capture_decoder`
+
+`serial_pin_capture` が取得した低速 SPI 風 event を byte に戻すテンプレート。
+再利用 RTL: `rtl/capture/spi_edge_decoder.sv`
+
+detail:
+
+- timestamp付き edge event の消費
+- `CPHA=0` の MSB-first SPI byte 復元
+- 復元 byte と一緒に data/command pin を sample
+- chip select deassert 時の `frame_done` pulse
+
 ## Common RTL
 
 ### ready/valid stream
@@ -208,6 +278,7 @@ make test-bad-params
 - `epaper_reset_controller`: reset low、reset high wait、ready の挙動
 - `epaper_window_sequence`: window / cursor コマンド列
 - `epaper_frame_fill`: `0x24` と fill data の生成
+- 今回追加した template RTL は file list 全体 elaboration で確認
 - `rv_skid_buffer`: backpressure 中の 1 word 保持
 - `sync_2ff`: 2段同期の挙動
 - `spi_tx`: `epaper_spi_stream_controller` 経由で検証

@@ -2,9 +2,14 @@ rtl/common/sync_2ff.sv
 rtl/common/rv_skid_buffer.sv
 rtl/common/stream_if.sv
 rtl/spi/spi_tx.sv
+rtl/epaper/epaper_panel_profile_pkg.sv
 rtl/framebuffer/fb_1bpp_packer.sv
 rtl/capture/serial_pin_capture.sv
+rtl/capture/spi_edge_decoder.sv
 rtl/epaper/epaper_reset_controller.sv
 rtl/epaper/epaper_spi_stream_controller.sv
 rtl/epaper/epaper_window_sequence.sv
 rtl/epaper/epaper_frame_fill.sv
+rtl/epaper/epaper_command_sequence_player.sv
+rtl/epaper/epaper_pattern_generator.sv
+rtl/epaper/epaper_bringup_fill_top.sv

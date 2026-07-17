@@ -118,6 +118,82 @@ Details:
 Verify whether `0x24` is the image RAM write command and what byte polarity
 means on the target panel.
 
+### 06: Panel Profile Constants
+
+Path: `templates/06_panel_profile_constants`
+
+Template for keeping common e-Paper command values and small-panel geometry
+constants in one reusable package.
+Reusable RTL: `rtl/epaper/epaper_panel_profile_pkg.sv`
+
+Details:
+
+- Common command values such as `0x12`, `0x20`, `0x22`, `0x24`, `0x26`,
+  `0x44`, `0x45`, `0x4E`, and `0x4F`
+- Common small-panel dimensions such as 2.13 inch, 2.9 inch, and 4.2 inch class
+- Practical starting values, not a complete device database
+
+### 07: Command Sequence Player
+
+Path: `templates/07_command_sequence_player`
+
+Template for converting command/data/delay/wait tokens into `{dc, byte}` stream
+traffic.
+Reusable RTL: `rtl/epaper/epaper_command_sequence_player.sv`
+
+Details:
+
+- Emits command and data bytes
+- Supports fixed clock-cycle delays
+- Supports wait-until-not-busy tokens
+- Pulses `done` when an end token is consumed
+
+### 08: Frame Pattern Generator
+
+Path: `templates/08_frame_pattern_generator`
+
+Template for generating deterministic `0x24` frame RAM write traffic without a
+host framebuffer.
+Reusable RTL: `rtl/epaper/epaper_pattern_generator.sv`
+
+Details:
+
+- Fill byte
+- Checker bytes
+- Vertical stripes
+- Horizontal stripes
+- Walking one bit
+
+### 09: e-Paper Bring-up Top
+
+Path: `templates/09_epaper_bringup_top`
+
+Template for wiring reset, frame fill, and SPI stream output together as a small
+bring-up top.
+Reusable RTL: `rtl/epaper/epaper_bringup_fill_top.sv`
+
+Details:
+
+- Runs reset timing
+- Emits one `0x24` fill transaction
+- Drives SPI mode 0 panel pins
+- Leaves full initialization and refresh policy outside this template
+
+### 10: SPI Capture Decoder
+
+Path: `templates/10_spi_capture_decoder`
+
+Template for decoding low-speed SPI-like events captured by
+`serial_pin_capture`.
+Reusable RTL: `rtl/capture/spi_edge_decoder.sv`
+
+Details:
+
+- Consumes timestamped edge events
+- Reconstructs MSB-first SPI bytes for `CPHA=0`
+- Samples a data/command pin with each decoded byte
+- Pulses `frame_done` when chip select deasserts
+
 ## Common RTL
 
 ### ready/valid stream
@@ -223,6 +299,7 @@ Test coverage:
 - `epaper_reset_controller`: reset-low, reset-high wait, and ready behavior
 - `epaper_window_sequence`: window/cursor command streams
 - `epaper_frame_fill`: `0x24` and fill data generation
+- newly added template RTL is currently covered by full file-list elaboration
 - `rv_skid_buffer`: one-word holding under backpressure
 - `sync_2ff`: two-stage synchronization behavior
 - `spi_tx`: covered through `epaper_spi_stream_controller`
