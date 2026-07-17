@@ -41,12 +41,18 @@ RTL still owns pin-level timing.
 - Receivers sample on the rising edge.
 - Bytes are shifted MSB first.
 - `cs_n` is asserted while each byte is shifted and deasserted between bytes.
+- `HOLD_CS_UNTIL_LAST=1` keeps `cs_n` asserted across bytes until a transfer
+  with `in_last=1` completes.
 
 ## Busy Input
 
 `epd_busy` is treated as an asynchronous external input and synchronized through
 `sync_2ff` before it is used by the ready/valid control logic. Because of that,
 `in_ready` reflects busy changes after the synchronizer latency.
+
+`BUSY_TIMEOUT_CYCLES` can be set to a non-zero value to make a continuously busy
+panel raise sticky `timeout` and `error` outputs. A value of `0` disables this
+timeout.
 
 ## Files
 

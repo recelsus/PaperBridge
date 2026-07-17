@@ -1,6 +1,7 @@
 module spi_tx #(
     parameter int CLK_HZ = 50_000_000,
-    parameter int SPI_HZ = 10_000_000
+    parameter int SPI_HZ = 10_000_000,
+    parameter bit HOLD_CS_UNTIL_LAST = 1'b0
 ) (
     input  logic       clk,
     input  logic       rst_n,
@@ -8,6 +9,7 @@ module spi_tx #(
     input  logic       in_valid,
     output logic       in_ready,
     input  logic [7:0] in_data,
+    input  logic       in_last,
 
     output logic       spi_cs_n,
     output logic       spi_sclk,
@@ -29,6 +31,7 @@ module spi_tx #(
     logic [SPI_DIV_W-1:0] spi_cnt_q;
     logic [2:0] bit_cnt_q;
     logic [7:0] shreg_q;
+    logic hold_cs_q;
 
 `ifndef SYNTHESIS
     initial begin
@@ -46,7 +49,7 @@ module spi_tx #(
 
     assign in_ready = (state_q == ST_IDLE);
     assign busy = (state_q != ST_IDLE);
-    assign spi_cs_n = (state_q == ST_IDLE);
+    assign spi_cs_n = (state_q == ST_IDLE) && !hold_cs_q;
     assign spi_sclk = (state_q == ST_HIGH);
     assign spi_mosi = shreg_q[7];
 
@@ -56,6 +59,7 @@ module spi_tx #(
             spi_cnt_q <= '0;
             bit_cnt_q <= '0;
             shreg_q <= '0;
+            hold_cs_q <= 1'b0;
             transfer_done <= 1'b0;
         end else begin
             transfer_done <= 1'b0;
@@ -65,6 +69,7 @@ module spi_tx #(
                     spi_cnt_q <= '0;
                     if (in_valid) begin
                         shreg_q <= in_data;
+                        hold_cs_q <= HOLD_CS_UNTIL_LAST && !in_last;
                         bit_cnt_q <= 3'd7;
                         state_q <= ST_LOW;
                     end
@@ -84,6 +89,9 @@ module spi_tx #(
                         spi_cnt_q <= '0;
                         if (bit_cnt_q == 3'd0) begin
                             state_q <= ST_IDLE;
+                            if (!HOLD_CS_UNTIL_LAST || in_last) begin
+                                hold_cs_q <= 1'b0;
+                            end
                             transfer_done <= 1'b1;
                         end else begin
                             bit_cnt_q <= bit_cnt_q - 1'b1;

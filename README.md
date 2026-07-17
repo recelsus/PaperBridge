@@ -165,7 +165,8 @@ Current scope:
 - Fixed SPI mode 0
 - One byte per transfer
 - Ready/valid input
-- Byte-scoped chip select
+- Byte-scoped chip select by default
+- Optional chip-select hold until `in_last`
 - Registered `transfer_done`
 
 ### epaper_reset_controller
@@ -214,7 +215,8 @@ Test coverage:
 - `fb_1bpp_packer`: byte packing for 1bpp pixels
 - `serial_pin_capture`: edge events, level events, FIFO holding, and overflow
 - `epaper_spi_stream_controller`: SPI output, reset timing, busy handling,
-  command/data switching, and SPI clock period for `{dc, byte}` streams
+  command/data switching, SPI clock period, optional CS hold, and busy timeout
+  for `{dc, byte}` streams
 - `epaper_reset_controller`: reset-low, reset-high wait, and ready behavior
 - `epaper_window_sequence`: window/cursor command streams
 - `epaper_frame_fill`: `0x24` and fill data generation

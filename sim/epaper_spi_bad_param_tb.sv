@@ -21,7 +21,9 @@ module epaper_spi_bad_param_tb;
         .epd_mosi(),
         .epd_dc(),
         .epd_rst_n(),
-        .frame_done()
+        .frame_done(),
+        .timeout(),
+        .error()
     );
 
     always #5 clk = ~clk;

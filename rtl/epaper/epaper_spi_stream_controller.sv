@@ -2,7 +2,9 @@ module epaper_spi_stream_controller #(
     parameter int CLK_HZ = 50_000_000,
     parameter int SPI_HZ = 10_000_000,
     parameter int RESET_LOW_US = 10_000,
-    parameter int RESET_HIGH_US = 10_000
+    parameter int RESET_HIGH_US = 10_000,
+    parameter bit HOLD_CS_UNTIL_LAST = 1'b0,
+    parameter int BUSY_TIMEOUT_CYCLES = 0
 ) (
     input  logic       clk,
     input  logic       rst_n,
@@ -19,8 +21,12 @@ module epaper_spi_stream_controller #(
     output logic       epd_dc,
     output logic       epd_rst_n,
 
-    output logic       frame_done
+    output logic       frame_done,
+    output logic       timeout,
+    output logic       error
 );
+    localparam int TIMEOUT_CNT_W = (BUSY_TIMEOUT_CYCLES <= 1) ? 1 : $clog2(BUSY_TIMEOUT_CYCLES + 1);
+
     typedef enum logic [2:0] {
         ST_IDLE,
         ST_START_SPI,
@@ -37,6 +43,9 @@ module epaper_spi_stream_controller #(
     logic                   spi_busy;
     logic                   spi_transfer_done;
     logic                   reset_ready;
+    logic [TIMEOUT_CNT_W-1:0] timeout_cnt_q, timeout_cnt_d;
+    logic timeout_d;
+    logic error_d;
 
     epaper_reset_controller #(
         .CLK_HZ(CLK_HZ),
@@ -58,13 +67,15 @@ module epaper_spi_stream_controller #(
 
     spi_tx #(
         .CLK_HZ(CLK_HZ),
-        .SPI_HZ(SPI_HZ)
+        .SPI_HZ(SPI_HZ),
+        .HOLD_CS_UNTIL_LAST(HOLD_CS_UNTIL_LAST)
     ) u_spi_tx (
         .clk(clk),
         .rst_n(rst_n),
         .in_valid(spi_in_valid),
         .in_ready(spi_in_ready),
         .in_data(in_data[7:0]),
+        .in_last(last_q),
         .spi_cs_n(epd_cs_n),
         .spi_sclk(epd_sclk),
         .spi_mosi(epd_mosi),
@@ -89,6 +100,9 @@ module epaper_spi_stream_controller #(
         if (RESET_HIGH_US < 0) begin
             $fatal(1, "RESET_HIGH_US must be non-negative");
         end
+        if (BUSY_TIMEOUT_CYCLES < 0) begin
+            $fatal(1, "BUSY_TIMEOUT_CYCLES must be non-negative");
+        end
     end
 `endif
 
@@ -96,6 +110,9 @@ module epaper_spi_stream_controller #(
         state_d     = state_q;
         last_d      = last_q;
         dc_d        = dc_q;
+        timeout_cnt_d = timeout_cnt_q;
+        timeout_d = timeout;
+        error_d = error;
 
         in_ready    = 1'b0;
         epd_dc      = dc_q;
@@ -104,6 +121,17 @@ module epaper_spi_stream_controller #(
 
         case (state_q)
             ST_IDLE: begin
+                if (!epd_busy_sync) begin
+                    timeout_cnt_d = '0;
+                end else if (reset_ready && BUSY_TIMEOUT_CYCLES > 0 && !timeout) begin
+                    if (timeout_cnt_q >= BUSY_TIMEOUT_CYCLES - 1) begin
+                        timeout_d = 1'b1;
+                        error_d = 1'b1;
+                    end else begin
+                        timeout_cnt_d = timeout_cnt_q + 1'b1;
+                    end
+                end
+
                 in_ready = reset_ready && !epd_busy_sync && spi_in_ready;
                 if (in_valid && in_ready) begin
                     dc_d      = in_data[8];
@@ -135,10 +163,16 @@ module epaper_spi_stream_controller #(
             state_q     <= ST_IDLE;
             last_q      <= 1'b0;
             dc_q        <= 1'b0;
+            timeout_cnt_q <= '0;
+            timeout <= 1'b0;
+            error <= 1'b0;
         end else begin
             state_q     <= state_d;
             last_q      <= last_d;
             dc_q        <= dc_d;
+            timeout_cnt_q <= timeout_cnt_d;
+            timeout <= timeout_d;
+            error <= error_d;
         end
     end
 endmodule
