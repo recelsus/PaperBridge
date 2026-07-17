@@ -77,9 +77,10 @@ Reusable RTL: `rtl/framebuffer/fb_1bpp_packer.sv`
 Details:
 
 - Packs 8 pixels into 1 byte
-- Places the first pixel at bit 7
-- MSB first
-- Pads unused lower bits with 0 when `pixel_last` arrives before 8 pixels
+- Places the first pixel at bit 7 by default
+- Supports MSB-first or LSB-first packing
+- Supports input pixel inversion
+- Pads unused bits with 0 when `pixel_last` arrives before 8 pixels
 - Supports ready/valid backpressure
 
 ### 04: Panel Command Builder
@@ -214,7 +215,7 @@ make test-bad-params
 
 Test coverage:
 
-- `fb_1bpp_packer`: byte packing for 1bpp pixels
+- `fb_1bpp_packer`: byte packing for 1bpp pixels, bit order, and inversion
 - `serial_pin_capture`: edge events, level events, FIFO holding, and overflow
 - `epaper_spi_stream_controller`: SPI output, reset timing, busy handling,
   command/data switching, SPI clock period, optional CS hold, and busy timeout

@@ -1,4 +1,7 @@
-module fb_1bpp_packer (
+module fb_1bpp_packer #(
+    parameter bit MSB_FIRST = 1'b1,
+    parameter bit INVERT = 1'b0
+) (
     input  logic       clk,
     input  logic       rst_n,
 
@@ -17,6 +20,8 @@ module fb_1bpp_packer (
     logic       out_valid_q, out_valid_d;
     logic [7:0] out_byte_q, out_byte_d;
     logic       out_last_q, out_last_d;
+    logic [7:0] packed_next;
+    logic       pixel_value;
 
     wire output_blocked = out_valid_q && !byte_ready;
     wire will_complete_byte = (count_q == 3'd7) || pixel_last;
@@ -32,6 +37,8 @@ module fb_1bpp_packer (
         out_valid_d = out_valid_q;
         out_byte_d = out_byte_q;
         out_last_d = out_last_q;
+        packed_next = shreg_q;
+        pixel_value = pixel_i ^ INVERT;
 
         if (out_valid_q && byte_ready) begin
             out_valid_d = 1'b0;
@@ -39,11 +46,16 @@ module fb_1bpp_packer (
         end
 
         if (pixel_valid && pixel_ready) begin
-            shreg_d = {shreg_q[6:0], pixel_i};
+            if (MSB_FIRST) begin
+                packed_next[3'd7 - count_q] = pixel_value;
+            end else begin
+                packed_next[count_q] = pixel_value;
+            end
+            shreg_d = packed_next;
 
             if (will_complete_byte) begin
                 out_valid_d = 1'b1;
-                out_byte_d = ({shreg_q[6:0], pixel_i} << (3'd7 - count_q));
+                out_byte_d = packed_next;
                 out_last_d = pixel_last;
                 shreg_d = '0;
                 count_d = '0;

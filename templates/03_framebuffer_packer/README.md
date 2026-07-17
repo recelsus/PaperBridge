@@ -32,7 +32,7 @@ pixel_i[0] = 0 or 1
 Output:
 
 ```text
-8 pixels per byte, MSB first
+8 pixels per byte, MSB first by default
 ```
 
 This is the common packing style used by many monochrome display controllers.
@@ -43,10 +43,11 @@ This is the common packing style used by many monochrome display controllers.
 
 ## Timing and Partial Byte Rules
 
-- The first pixel in a byte is placed at bit 7.
-- Pixels are packed MSB first.
+- With `MSB_FIRST=1`, the first pixel in a byte is placed at bit 7.
+- With `MSB_FIRST=0`, the first pixel in a byte is placed at bit 0.
+- With `INVERT=1`, each input pixel is inverted before packing.
 - If `pixel_last` arrives before eight pixels have been collected, unused lower
-  bits are filled with zero.
+  or upper bits are filled with zero according to the selected bit order.
 - When `byte_valid=1` and `byte_ready=0`, `byte_o` and `byte_last` remain stable.
 - If the current output byte is accepted in a cycle, the next pixel may also be
   accepted in that same cycle.

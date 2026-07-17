@@ -68,9 +68,10 @@ path: `templates/03_framebuffer_packer`
 detail:
 
 - 8 pixel を 1 byte に pack
-- 最初の pixel を bit 7 に配置
-- MSB first
-- 8 pixel 未満で `pixel_last` が来た場合、未使用下位 bit は 0 埋め
+- default では最初の pixel を bit 7 に配置
+- MSB first / LSB first の bit order 指定
+- 入力 pixel の反転指定
+- 8 pixel 未満で `pixel_last` が来た場合、未使用 bit は 0 埋め
 - ready/valid backpressure 対応
 
 ### 04: Panel Command Builder
@@ -201,7 +202,7 @@ make test-bad-params
 
 テスト対象:
 
-- `fb_1bpp_packer`: 1bpp pixel の byte pack
+- `fb_1bpp_packer`: 1bpp pixel の byte pack、bit order、反転
 - `serial_pin_capture`: edge event、level event、FIFO保持、overflow
 - `epaper_spi_stream_controller`: `{dc, byte}` の SPI 出力、reset timing、busy handling、command/data切替、SPI clock period、CS hold、busy timeout
 - `epaper_reset_controller`: reset low、reset high wait、ready の挙動
