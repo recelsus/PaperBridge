@@ -21,20 +21,7 @@ module epaper_spi_stream_controller #(
 
     output logic       frame_done
 );
-    localparam longint RESET_LOW_CYCLES = (RESET_LOW_US == 0)
-                                        ? 0
-                                        : ((longint'(CLK_HZ) * longint'(RESET_LOW_US)) + 999_999) / 1_000_000;
-    localparam longint RESET_HIGH_CYCLES = (RESET_HIGH_US == 0)
-                                         ? 0
-                                         : ((longint'(CLK_HZ) * longint'(RESET_HIGH_US)) + 999_999) / 1_000_000;
-    localparam int RESET_CNT_MAX = (RESET_LOW_CYCLES > RESET_HIGH_CYCLES)
-                                 ? RESET_LOW_CYCLES
-                                 : RESET_HIGH_CYCLES;
-    localparam int RESET_CNT_W = (RESET_CNT_MAX <= 1) ? 1 : $clog2(RESET_CNT_MAX + 1);
-
     typedef enum logic [2:0] {
-        ST_RESET_LOW,
-        ST_RESET_HIGH,
         ST_IDLE,
         ST_START_SPI,
         ST_WAIT_SPI
@@ -42,7 +29,6 @@ module epaper_spi_stream_controller #(
 
     state_t state_q, state_d;
 
-    logic [RESET_CNT_W-1:0] reset_cnt_q, reset_cnt_d;
     logic                   last_q, last_d;
     logic                   dc_q, dc_d;
     logic                   epd_busy_sync;
@@ -50,6 +36,18 @@ module epaper_spi_stream_controller #(
     logic                   spi_in_ready;
     logic                   spi_busy;
     logic                   spi_transfer_done;
+    logic                   reset_ready;
+
+    epaper_reset_controller #(
+        .CLK_HZ(CLK_HZ),
+        .RESET_LOW_US(RESET_LOW_US),
+        .RESET_HIGH_US(RESET_HIGH_US)
+    ) u_reset_controller (
+        .clk(clk),
+        .rst_n(rst_n),
+        .epd_rst_n(epd_rst_n),
+        .ready(reset_ready)
+    );
 
     sync_2ff u_epd_busy_sync (
         .clk(clk),
@@ -96,39 +94,17 @@ module epaper_spi_stream_controller #(
 
     always @* begin
         state_d     = state_q;
-        reset_cnt_d = reset_cnt_q;
         last_d      = last_q;
         dc_d        = dc_q;
 
         in_ready    = 1'b0;
         epd_dc      = dc_q;
-        epd_rst_n   = 1'b1;
         frame_done  = 1'b0;
         spi_in_valid = 1'b0;
 
         case (state_q)
-            ST_RESET_LOW: begin
-                epd_rst_n = 1'b0;
-                if (RESET_LOW_CYCLES == 0 || reset_cnt_q >= RESET_LOW_CYCLES - 1) begin
-                    reset_cnt_d = '0;
-                    state_d = ST_RESET_HIGH;
-                end else begin
-                    reset_cnt_d = reset_cnt_q + 1'b1;
-                end
-            end
-
-            ST_RESET_HIGH: begin
-                epd_rst_n = 1'b1;
-                if (RESET_HIGH_CYCLES == 0 || reset_cnt_q >= RESET_HIGH_CYCLES - 1) begin
-                    reset_cnt_d = '0;
-                    state_d = ST_IDLE;
-                end else begin
-                    reset_cnt_d = reset_cnt_q + 1'b1;
-                end
-            end
-
             ST_IDLE: begin
-                in_ready = !epd_busy_sync && spi_in_ready;
+                in_ready = reset_ready && !epd_busy_sync && spi_in_ready;
                 if (in_valid && in_ready) begin
                     dc_d      = in_data[8];
                     last_d    = in_last;
@@ -150,19 +126,17 @@ module epaper_spi_stream_controller #(
                 end
             end
 
-            default: state_d = ST_RESET_LOW;
+            default: state_d = ST_IDLE;
         endcase
     end
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            state_q     <= ST_RESET_LOW;
-            reset_cnt_q <= '0;
+            state_q     <= ST_IDLE;
             last_q      <= 1'b0;
             dc_q        <= 1'b0;
         end else begin
             state_q     <= state_d;
-            reset_cnt_q <= reset_cnt_d;
             last_q      <= last_d;
             dc_q        <= dc_d;
         end

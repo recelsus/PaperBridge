@@ -1,8 +1,8 @@
 IVERILOG ?= iverilog
 VVP ?= vvp
 
-.PHONY: test test-packer test-capture test-epaper test-window test-fill test-skid test-sync test-bad-params clean
-test: test-packer test-capture test-epaper test-window test-fill test-skid test-sync test-bad-params
+.PHONY: test test-packer test-capture test-epaper test-epaper-reset test-window test-fill test-skid test-sync test-bad-params clean
+test: test-packer test-capture test-epaper test-epaper-reset test-window test-fill test-skid test-sync test-bad-params
 
 test-packer:
 	$(IVERILOG) -g2012 -o /tmp/fb_1bpp_packer_tb.vvp \
@@ -20,9 +20,16 @@ test-epaper:
 	$(IVERILOG) -g2012 -o /tmp/epaper_spi_stream_controller_tb.vvp \
 		rtl/common/sync_2ff.sv \
 		rtl/spi/spi_tx.sv \
+		rtl/epaper/epaper_reset_controller.sv \
 		rtl/epaper/epaper_spi_stream_controller.sv \
 		sim/epaper_spi_stream_controller_tb.sv
 	$(VVP) /tmp/epaper_spi_stream_controller_tb.vvp
+
+test-epaper-reset:
+	$(IVERILOG) -g2012 -o /tmp/epaper_reset_controller_tb.vvp \
+		rtl/epaper/epaper_reset_controller.sv \
+		sim/epaper_reset_controller_tb.sv
+	$(VVP) /tmp/epaper_reset_controller_tb.vvp
 
 test-window:
 	$(IVERILOG) -g2012 -o /tmp/epaper_window_sequence_tb.vvp \
@@ -52,6 +59,7 @@ test-bad-params:
 	$(IVERILOG) -g2012 -o /tmp/epaper_spi_bad_param_tb.vvp \
 		rtl/common/sync_2ff.sv \
 		rtl/spi/spi_tx.sv \
+		rtl/epaper/epaper_reset_controller.sv \
 		rtl/epaper/epaper_spi_stream_controller.sv \
 		sim/epaper_spi_bad_param_tb.sv
 	@if $(VVP) /tmp/epaper_spi_bad_param_tb.vvp >/tmp/epaper_spi_bad_param_tb.log 2>&1; then \
@@ -76,6 +84,7 @@ clean:
 	rm -f /tmp/fb_1bpp_packer_tb.vvp
 	rm -f /tmp/serial_pin_capture_tb.vvp
 	rm -f /tmp/epaper_spi_stream_controller_tb.vvp
+	rm -f /tmp/epaper_reset_controller_tb.vvp
 	rm -f /tmp/epaper_window_sequence_tb.vvp
 	rm -f /tmp/epaper_frame_fill_tb.vvp
 	rm -f /tmp/rv_skid_buffer_tb.vvp

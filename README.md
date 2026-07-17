@@ -168,6 +168,18 @@ Current scope:
 - Byte-scoped chip select
 - Registered `transfer_done`
 
+### epaper_reset_controller
+
+Path: `rtl/epaper/epaper_reset_controller.sv`
+
+Reset sequencer for e-Paper panels.
+
+Current scope:
+
+- Parameterized reset-low duration
+- Parameterized reset-high wait duration
+- `ready` output after the reset sequence completes
+
 ## Test
 
 Icarus Verilog is used for the current tests.
@@ -189,6 +201,7 @@ Individual tests:
 make test-packer
 make test-capture
 make test-epaper
+make test-epaper-reset
 make test-window
 make test-fill
 make test-skid
@@ -202,6 +215,7 @@ Test coverage:
 - `serial_pin_capture`: edge events, level events, FIFO holding, and overflow
 - `epaper_spi_stream_controller`: SPI output, reset timing, busy handling,
   command/data switching, and SPI clock period for `{dc, byte}` streams
+- `epaper_reset_controller`: reset-low, reset-high wait, and ready behavior
 - `epaper_window_sequence`: window/cursor command streams
 - `epaper_frame_fill`: `0x24` and fill data generation
 - `rv_skid_buffer`: one-word holding under backpressure
