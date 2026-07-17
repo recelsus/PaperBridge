@@ -20,6 +20,8 @@ module epaper_spi_stream_controller_tb;
     logic sampled_dc [0:3];
     int sampled_count;
     int sampled_byte_count;
+    int reset_low_count;
+    int reset_high_wait_count;
 
     epaper_spi_stream_controller #(
         .CLK_HZ(1_000_000),
@@ -87,6 +89,8 @@ module epaper_spi_stream_controller_tb;
         sampled_byte = '0;
         sampled_count = 0;
         sampled_byte_count = 0;
+        reset_low_count = 0;
+        reset_high_wait_count = 0;
         for (int i = 0; i < 4; i++) begin
             sampled_bytes[i] = '0;
             sampled_dc[i] = 1'b0;
@@ -94,6 +98,22 @@ module epaper_spi_stream_controller_tb;
 
         repeat (4) @(posedge clk);
         rst_n = 1'b1;
+
+        while (!epd_rst_n) begin
+            reset_low_count = reset_low_count + 1;
+            @(posedge clk);
+        end
+        while (!in_ready) begin
+            reset_high_wait_count = reset_high_wait_count + 1;
+            @(posedge clk);
+        end
+
+        if (reset_low_count < 2) begin
+            $fatal(1, "reset low was too short: %0d cycles", reset_low_count);
+        end
+        if (reset_high_wait_count < 2) begin
+            $fatal(1, "reset high wait was too short: %0d cycles", reset_high_wait_count);
+        end
 
         epd_busy = 1'b1;
         repeat (4) @(posedge clk);

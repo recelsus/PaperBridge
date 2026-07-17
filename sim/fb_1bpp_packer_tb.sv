@@ -141,6 +141,20 @@ module fb_1bpp_packer_tb;
         byte_ready = 1'b1;
         @(posedge clk);
 
+        reset_dut();
+        send_pixel(1'b1, 1'b0);
+        send_pixel(1'b1, 1'b0);
+        @(negedge clk);
+        rst_n = 1'b0;
+        repeat (2) @(posedge clk);
+        if (byte_valid) begin
+            $fatal(1, "byte_valid stayed high during reset");
+        end
+        rst_n = 1'b1;
+        @(posedge clk);
+        send_pixel(1'b0, 1'b1);
+        expect_byte(8'h00, 1'b1);
+
         $finish;
     end
 endmodule

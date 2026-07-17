@@ -10,6 +10,13 @@ module serial_pin_capture_tb;
     logic event_ready;
     logic [47:0] event_data;
     logic overflow;
+    logic [1:0] wrap_pins_i;
+    logic wrap_event_valid;
+    logic wrap_event_ready;
+    logic [19:0] wrap_event_data;
+    logic wrap_overflow;
+    logic [3:0] wrap_ts0;
+    logic [3:0] wrap_ts1;
 
     serial_pin_capture #(
         .PIN_COUNT(4),
@@ -28,6 +35,23 @@ module serial_pin_capture_tb;
         .overflow(overflow)
     );
 
+    serial_pin_capture #(
+        .PIN_COUNT(2),
+        .TIMESTAMP_WIDTH(4),
+        .FIFO_DEPTH(2)
+    ) wrap_dut (
+        .clk(clk),
+        .rst_n(rst_n),
+        .pins_i(wrap_pins_i),
+        .edge_enable_i(2'b01),
+        .level_mask_i(2'b00),
+        .level_value_i(2'b00),
+        .event_valid(wrap_event_valid),
+        .event_ready(wrap_event_ready),
+        .event_data(wrap_event_data),
+        .overflow(wrap_overflow)
+    );
+
     always #5 clk = ~clk;
 
     initial begin
@@ -41,6 +65,8 @@ module serial_pin_capture_tb;
         level_mask_i = 4'b0000;
         level_value_i = 4'b0000;
         event_ready = 1'b0;
+        wrap_pins_i = 2'b00;
+        wrap_event_ready = 1'b0;
 
         repeat (4) @(posedge clk);
         rst_n = 1'b1;
@@ -163,6 +189,25 @@ module serial_pin_capture_tb;
 
         event_ready = 1'b1;
         @(posedge clk);
+
+        wrap_pins_i = 2'b00;
+        wrap_event_ready = 1'b1;
+        repeat (20) @(posedge clk);
+        wrap_pins_i = 2'b01;
+        wait (wrap_event_valid);
+        @(negedge clk);
+        wrap_ts0 = wrap_event_data[3:0];
+        wrap_pins_i = 2'b00;
+        repeat (18) @(posedge clk);
+        wrap_pins_i = 2'b01;
+        wait (wrap_event_valid);
+        @(negedge clk);
+        wrap_ts1 = wrap_event_data[3:0];
+        if (wrap_ts1 >= wrap_ts0) begin
+            $fatal(1, "timestamp did not wrap as expected: %01h -> %01h",
+                   wrap_ts0, wrap_ts1);
+        end
+
         $finish;
     end
 endmodule
